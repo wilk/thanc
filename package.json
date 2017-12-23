@@ -1,0 +1,16 @@
+{
+  "name": "thanc",
+  "version": "1.0.0",
+  "description": "Thanc: a smart way to thank NPM packages authors by starring their repos",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.17.1",
+    "npm-registry-client": "^8.5.0",
+    "prompt": "^1.0.0"
+  }
+}
