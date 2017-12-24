@@ -8,6 +8,7 @@ const prompt = require('prompt')
 const fs = require('fs')
 const util = require('util')
 const asyncReadFile = util.promisify(fs.readFile)
+const asyncAccessFile = util.promisify(fs.access)
 const EXIT_FAILURE = 1
 const DEFAULT_PACKAGE_LOCK_PATH = `${__dirname}/package-lock.json`
 
@@ -43,29 +44,26 @@ const getUserInfo = schema => {
 }
 
 (async () => {
-  prompt.start()
+  let manifest
 
-  // getting credentials from the user
-  let userInfo
+  // looking for package-lock.json, yarn.lock and package.json
   try {
-    console.log('Requesting user info...')
-    userInfo = await getUserInfo(schema)
-    console.log('done!')
-  } catch (err) {
-    console.log('Cannot fetch github user credentials')
-    console.error(err)
+    console.log('Looking for manifest file...')
+    const results = await Promise.all([
+      asyncAccessFile(`${__dirname}/package-lock.json`, fs.constants.R_OK),
+      asyncAccessFile(`${__dirname}/yarn.lock`, fs.constants.R_OK),
+      asyncAccessFile(`${__dirname}/package.json`, fs.constants.R_OK)
+    ])
 
-    process.exit(EXIT_FAILURE)
-  }
+    const packageLock = results[0],
+      yarnLock = results[0],
+      packageJson = results[0]
 
-  // testing credentials
-  const auth = {username: userInfo.username, password: userInfo.password}
-  try {
-    console.log('Testing github credentials...')
-    await axios({url: GITHUB_API_URL, method: 'get', auth})
-    console.log('done!')
+    if (packageLock) manifest = packageLock
+    else if (yarnLock) manifest = yarnLock
+    else manifest = packageJson
   } catch (err) {
-    console.log('Invalid credentials or maximum number of login attempts exceeded')
+    console.log('Cannot find manifest file: you\'re not in a npm/yarn project folder')
     console.error(err)
 
     process.exit(EXIT_FAILURE)
@@ -116,6 +114,34 @@ const getUserInfo = schema => {
     const splitUrl = detail.repository.url.split('/')
     repos[splitUrl[splitUrl.length - 1].replace('.git', '')] = splitUrl[splitUrl.length - 2]
   })
+
+  prompt.start()
+
+  // getting credentials from the user
+  let userInfo
+  try {
+    console.log('Requesting user info...')
+    userInfo = await getUserInfo(schema)
+    console.log('done!')
+  } catch (err) {
+    console.log('Cannot fetch github user credentials')
+    console.error(err)
+
+    process.exit(EXIT_FAILURE)
+  }
+
+  // testing credentials
+  const auth = {username: userInfo.username, password: userInfo.password}
+  try {
+    console.log('Testing github credentials...')
+    await axios({url: GITHUB_API_URL, method: 'get', auth})
+    console.log('done!')
+  } catch (err) {
+    console.log('Invalid credentials or maximum number of login attempts exceeded')
+    console.error(err)
+
+    process.exit(EXIT_FAILURE)
+  }
 
   // starring repos
   try {
