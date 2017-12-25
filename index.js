@@ -6,13 +6,11 @@ const GITHUB_STAR_URL = `${GITHUB_API_URL}/user/starred`
 const axios = require('axios')
 const prompt = require('prompt')
 const fs = require('fs')
-const util = require('util')
-const asyncReadFile = util.promisify(fs.readFile)
-const asyncAccessFile = util.promisify(fs.access)
 const EXIT_FAILURE = 1
 const program = require('commander')
 const path = require('path')
 const npm = require('npm')
+const os = require('os')
 
 const schema = {
   properties: {
@@ -26,11 +24,6 @@ const schema = {
       type: 'string',
       hidden: true,
       required: true
-    },
-    packageLockPath: {
-      description: 'Your package-lock.json path',
-      type: 'string',
-      default: DEFAULT_PACKAGE_LOCK_PATH
     }
   }
 }
@@ -41,6 +34,50 @@ const getUserInfo = schema => {
     prompt.get(schema, function (err, data) {
       if (err) reject(err)
       else resolve(data)
+    })
+  })
+}
+
+const generateLockFile = async projectPath => {
+  return new Promise((resolve, reject) => {
+    let packageJsonPath = path.resolve(projectPath, './package.json')
+    try {
+      fs.accessSync(packageJsonPath, fs.constants.R_OK)
+    } catch (err) {
+      console.log('Cannot find package.json: make sure to specify a Node.js project folder')
+      return reject(err)
+    }
+
+    let tmpFolder
+    try {
+      tmpFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'thanc-'))
+    } catch (err) {
+      console.log('Cannot create temporary folder on the file system')
+      return reject(err)
+    }
+
+    try {
+      fs.copyFileSync(packageJsonPath, `${tmpFolder}/package.json`)
+    } catch (err) {
+      console.log('Cannot copy package.json file on temp folder')
+      return reject(err)
+    }
+
+    npm.load({}, err => {
+      if (err) {
+        console.log('Cannot load NPM')
+        return reject(err)
+      }
+
+      npm.config.set('package-lock-only', true)
+      npm.commands.install(tmpFolder, [], err => {
+        if (err) {
+          console.log('Cannot generate package-lock.json inside temp folder')
+          return reject(err)
+        }
+
+        resolve(`${tmpFolder}/package-lock.json`)
+      })
     })
   })
 }
@@ -56,107 +93,41 @@ const getUserInfo = schema => {
 
   // looking for package.json file
   try {
-    manifest = await asyncReadFile(path.resolve(projectPath, './package-lock.json'), 'utf-8')
+    console.log('Reading package-lock.json file...')
+    manifest = fs.readFileSync(path.resolve(projectPath, './package-lock.json'), 'utf-8')
   } catch (err) {
     manifestExists = false
   }
 
   if (!manifestExists) {
-    console.log('package-lock.json does not exist in this folder: trying to generate it from package.json...')
-
-    let packageJsonPath = path.resolve(projectPath, './package.json')
     try {
-      fs.accessSync(packageJsonPath, fs.constants.R_OK)
+      console.log('package-lock.json does not exist in this folder: generating it from package.json...')
+      const manifestPath = await generateLockFile(projectPath)
+      manifest = fs.readFileSync(manifestPath, 'utf-8')
     } catch (err) {
-      console.log('Cannot find package.json: make sure to specify a Node.js project folder')
       console.error(err)
 
       process.exit(EXIT_FAILURE)
     }
-
-    let tmpFolder
-    try {
-      tmpFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'thanc-'))
-    } catch (err) {
-      console.log('Cannot create temporary folder on the file system')
-      console.error(err)
-
-      process.exit(EXIT_FAILURE)
-    }
-
-    try {
-      fs.copyFileSync(packageJsonPath, `${tmpFolder}/package.json`)
-    } catch (err) {
-      console.log('Cannot copy package.json file on temp folder')
-      console.error(err)
-
-      process.exit(EXIT_FAILURE)
-    }
-
-    npm.load({}, err => {
-      if (err) return console.error(err)
-
-      npm.config.set('package-lock-only', true)
-      npm.commands.install(tmpFolder, [], (err, result) => {
-        if (err) return console.error(err)
-
-        console.log(result)
-      })
-    })
   }
 
-  manifest = JSON.parse(manifest)
-
-  // looking for package-lock.json
   try {
-    console.log('Looking for package-lock.json file...')
-    const results = await Promise.all([
-      asyncAccessFile(`${__dirname}/package-lock.json`, fs.constants.R_OK),
-      asyncAccessFile(`${__dirname}/yarn.lock`, fs.constants.R_OK),
-      asyncAccessFile(`${__dirname}/package.json`, fs.constants.R_OK)
-    ])
-
-    const packageLock = results[0],
-      yarnLock = results[0],
-      packageJson = results[0]
-
-    if (packageLock) manifest = packageLock
-    else if (yarnLock) manifest = yarnLock
-    else if (packageJson) manifest = packageJson
+    manifest = JSON.parse(manifest)
   } catch (err) {
-    console.log('Cannot find manifest file: you\'re not in a npm/yarn project folder')
+    console.log('Cannot parse package-lock.json file')
+
     console.error(err)
-
-    process.exit(EXIT_FAILURE)
-  }
-
-  if (manifest === undefined) {
-    console.error('Cannot find manifest file: you\'re not in a npm/yarn project folder')
     process.exit(EXIT_FAILURE)
   }
 
   console.log('done!')
 
-  // reading manifest
-  let pkg
-  try {
-    console.log('Reading package-lock.json...')
-    const rawManifest = await asyncReadFile(manifest, 'utf-8')
-    pkg = JSON.parse(rawManifest)
-    console.log('done!')
-  } catch (err) {
-    console.log('Cannot read package-lock.json')
-    console.error(err)
-
-    process.exit(EXIT_FAILURE)
-  }
-
   // generating deps repos promises
-  const depsPromises = Object.keys(pkg.dependencies).map(dep => {
+  const depsPromises = Object.keys(manifest.dependencies).map(dep => {
     return new Promise((resolve, reject) => {
       client.get(`${NPM_REGISTRY_URL}/${dep}`, {}, (err, data) => {
         if (err) reject(err)
-        else resolve(data.versions[pkg.dependencies[dep].version])
+        else resolve(data.versions[manifest.dependencies[dep].version])
       })
     })
   })
