@@ -10,7 +10,9 @@ const util = require('util')
 const asyncReadFile = util.promisify(fs.readFile)
 const asyncAccessFile = util.promisify(fs.access)
 const EXIT_FAILURE = 1
-const DEFAULT_PACKAGE_LOCK_PATH = `${__dirname}/package-lock.json`
+const program = require('commander')
+const path = require('path')
+const npm = require('npm')
 
 const schema = {
   properties: {
@@ -44,11 +46,70 @@ const getUserInfo = schema => {
 }
 
 (async () => {
-  let manifest
+  let projectPath = '.'
+  program
+    .arguments('<path>')
+    .action(path => projectPath = path ? path : projectPath)
+    .parse(process.argv)
 
-  // looking for package-lock.json, yarn.lock and package.json
+  let manifest, manifestExists = true
+
+  // looking for package.json file
   try {
-    console.log('Looking for manifest file...')
+    manifest = await asyncReadFile(path.resolve(projectPath, './package-lock.json'), 'utf-8')
+  } catch (err) {
+    manifestExists = false
+  }
+
+  if (!manifestExists) {
+    console.log('package-lock.json does not exist in this folder: trying to generate it from package.json...')
+
+    let packageJsonPath = path.resolve(projectPath, './package.json')
+    try {
+      fs.accessSync(packageJsonPath, fs.constants.R_OK)
+    } catch (err) {
+      console.log('Cannot find package.json: make sure to specify a Node.js project folder')
+      console.error(err)
+
+      process.exit(EXIT_FAILURE)
+    }
+
+    let tmpFolder
+    try {
+      tmpFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'thanc-'))
+    } catch (err) {
+      console.log('Cannot create temporary folder on the file system')
+      console.error(err)
+
+      process.exit(EXIT_FAILURE)
+    }
+
+    try {
+      fs.copyFileSync(packageJsonPath, `${tmpFolder}/package.json`)
+    } catch (err) {
+      console.log('Cannot copy package.json file on temp folder')
+      console.error(err)
+
+      process.exit(EXIT_FAILURE)
+    }
+
+    npm.load({}, err => {
+      if (err) return console.error(err)
+
+      npm.config.set('package-lock-only', true)
+      npm.commands.install(tmpFolder, [], (err, result) => {
+        if (err) return console.error(err)
+
+        console.log(result)
+      })
+    })
+  }
+
+  manifest = JSON.parse(manifest)
+
+  // looking for package-lock.json
+  try {
+    console.log('Looking for package-lock.json file...')
     const results = await Promise.all([
       asyncAccessFile(`${__dirname}/package-lock.json`, fs.constants.R_OK),
       asyncAccessFile(`${__dirname}/yarn.lock`, fs.constants.R_OK),
@@ -61,7 +122,7 @@ const getUserInfo = schema => {
 
     if (packageLock) manifest = packageLock
     else if (yarnLock) manifest = yarnLock
-    else manifest = packageJson
+    else if (packageJson) manifest = packageJson
   } catch (err) {
     console.log('Cannot find manifest file: you\'re not in a npm/yarn project folder')
     console.error(err)
@@ -69,12 +130,19 @@ const getUserInfo = schema => {
     process.exit(EXIT_FAILURE)
   }
 
-  // reading package-lock.json
+  if (manifest === undefined) {
+    console.error('Cannot find manifest file: you\'re not in a npm/yarn project folder')
+    process.exit(EXIT_FAILURE)
+  }
+
+  console.log('done!')
+
+  // reading manifest
   let pkg
   try {
     console.log('Reading package-lock.json...')
-    const rawPackageLock = await asyncReadFile(userInfo.packageLockPath, 'utf-8')
-    pkg = JSON.parse(rawPackageLock)
+    const rawManifest = await asyncReadFile(manifest, 'utf-8')
+    pkg = JSON.parse(rawManifest)
     console.log('done!')
   } catch (err) {
     console.log('Cannot read package-lock.json')

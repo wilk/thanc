@@ -18,6 +18,8 @@
   "license": "MIT",
   "dependencies": {
     "axios": "^0.17.1",
+    "commander": "^2.12.2",
+    "npm": "^5.6.0",
     "npm-registry-client": "^8.5.0",
     "prompt": "^1.0.0"
   }
