@@ -182,6 +182,7 @@ const generateLockFile = async projectPath => {
   // generating deps repos promises
   const depsPromises = Object.keys(manifest.dependencies).map(dep => {
     return new Promise((resolve, reject) => {
+      // @todo: make 5 or 10 requests per time and then wait 1 second, or maybe 1 second for each one
       client.get(`${NPM_REGISTRY_URL}/${dep}`, {}, (err, data) => {
         if (err) reject(err)
         else resolve(data.versions[manifest.dependencies[dep].version])
@@ -211,16 +212,66 @@ const generateLockFile = async projectPath => {
     repos[splitUrl[splitUrl.length - 1].replace('.git', '')] = splitUrl[splitUrl.length - 2]
   })
 
-  // starring repos
-  try {
-    console.log('Starring dependencies... ')
-    await Promise.all(Object.keys(repos).map(repo => axios({url: `${GITHUB_STAR_URL}/${repos[repo]}/${repo}`, method: 'put', auth})))
-    console.log('done!')
-    console.log(`Starred ${Object.keys(repos).length} repos!`)
-  } catch (err) {
-    console.log('Cannot star dependencies')
-    console.error(err)
+  const reposKeys = Object.keys(repos),
+    CHUNK_SIZE = 10
 
-    process.exit(EXIT_FAILURE)
+  if (reposKeys.length > CHUNK_SIZE) {
+    const loops = Math.floor(reposKeys.length / CHUNK_SIZE),
+      reposMatrix = []
+
+    for (let i = 0; i < loops; i++) {
+      const chunk = []
+      for (let j = 0; j < CHUNK_SIZE; j++) {
+        chunk.push(reposKeys[(i * CHUNK_SIZE) + j])
+      }
+
+      reposMatrix.push(chunk)
+    }
+
+    const diff = reposKeys.length % CHUNK_SIZE
+    if (diff > 0) {
+      const chunk = []
+      for (let i = 0; i < diff; i++) {
+        chunk.push(reposKeys[reposKeys.length - diff + i])
+      }
+
+      reposMatrix.push(chunk)
+    }
+
+    console.log('REPOS MATRIX LEN', reposMatrix.length)
+
+    try {
+      console.log('Starring dependencies... ')
+      await reposMatrix.reduce((promise, chunk) => {
+        return promise.then(() => {
+          console.log('STARRING CURRENT CHUNK', chunk)
+          const promises = chunk.map(repo => axios({url: `${GITHUB_STAR_URL}/${repos[repo]}/${repo}`, method: 'put', auth}))
+
+          promises.push(new Promise(resolve => setTimeout(resolve.bind(resolve), 1000)))
+
+          return Promise.all(promises)
+        })
+      }, Promise.resolve())
+      console.log('done!')
+      console.log(`Starred ${Object.keys(repos).length} repos!`)
+    } catch (err) {
+      console.log('Cannot star dependencies')
+      console.error(err)
+
+      process.exit(EXIT_FAILURE)
+    }
+  } else {
+    // starring repos
+    try {
+      console.log('Starring dependencies... ')
+      await Promise.all(Object.keys(repos).map(repo => axios({url: `${GITHUB_STAR_URL}/${repos[repo]}/${repo}`, method: 'put', auth})))
+      console.log('done!')
+      console.log(`Starred ${Object.keys(repos).length} repos!`)
+    } catch (err) {
+      console.log('Cannot star dependencies')
+      console.error(err)
+
+      process.exit(EXIT_FAILURE)
+    }
   }
 })()
