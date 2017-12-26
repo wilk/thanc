@@ -208,16 +208,23 @@ const generateLockFile = async projectPath => {
   deps.forEach((detail) => {
     if (!detail.repository) return
 
+    // covering /<owner>/<repo> urls
     const splitUrl = detail.repository.url.split('/')
-    repos[splitUrl[splitUrl.length - 1].replace('.git', '')] = splitUrl[splitUrl.length - 2]
+
+    // covering also git@github.com:<owner>/<repo> urls
+    let owner = splitUrl[splitUrl.length - 2]
+    const ownerSplit = owner.split(':')
+    if (ownerSplit.length > 1 && ownerSplit[1].length > 0) owner = ownerSplit[1]
+
+    repos[splitUrl[splitUrl.length - 1].replace('.git', '')] = owner
   })
 
   const reposKeys = Object.keys(repos),
     CHUNK_SIZE = 10
 
+  let reposMatrix = []
   if (reposKeys.length > CHUNK_SIZE) {
-    const loops = Math.floor(reposKeys.length / CHUNK_SIZE),
-      reposMatrix = []
+    const loops = Math.floor(reposKeys.length / CHUNK_SIZE)
 
     for (let i = 0; i < loops; i++) {
       const chunk = []
@@ -237,41 +244,26 @@ const generateLockFile = async projectPath => {
 
       reposMatrix.push(chunk)
     }
+  } else reposMatrix = reposKeys
 
-    console.log('REPOS MATRIX LEN', reposMatrix.length)
-
-    try {
-      console.log('Starring dependencies... ')
-      await reposMatrix.reduce((promise, chunk) => {
-        return promise.then(() => {
-          console.log('STARRING CURRENT CHUNK', chunk)
-          const promises = chunk.map(repo => axios({url: `${GITHUB_STAR_URL}/${repos[repo]}/${repo}`, method: 'put', auth}))
-
-          promises.push(new Promise(resolve => setTimeout(resolve.bind(resolve), 1000)))
-
-          return Promise.all(promises)
+  try {
+    console.log('Starring dependencies... ')
+    let invalidRepoUrl = 0
+    await reposMatrix.reduce((promise, chunk) => {
+      return promise.then(() => {
+        const promises = chunk.map(repo => {
+          return axios({url: `${GITHUB_STAR_URL}/${repos[repo]}/${repo}`, method: 'put', auth})
         })
-      }, Promise.resolve())
-      console.log('done!')
-      console.log(`Starred ${Object.keys(repos).length} repos!`)
-    } catch (err) {
-      console.log('Cannot star dependencies')
-      console.error(err)
 
-      process.exit(EXIT_FAILURE)
-    }
-  } else {
-    // starring repos
-    try {
-      console.log('Starring dependencies... ')
-      await Promise.all(Object.keys(repos).map(repo => axios({url: `${GITHUB_STAR_URL}/${repos[repo]}/${repo}`, method: 'put', auth})))
-      console.log('done!')
-      console.log(`Starred ${Object.keys(repos).length} repos!`)
-    } catch (err) {
-      console.log('Cannot star dependencies')
-      console.error(err)
+        return Promise.all(promises)
+      }).catch(() => invalidRepoUrl++)
+    }, Promise.resolve())
+    console.log('done!')
+    console.log(`Starred ${Object.keys(repos).length - invalidRepoUrl} repos!`)
+  } catch (err) {
+    console.log('Cannot star dependencies')
+    console.error(err)
 
-      process.exit(EXIT_FAILURE)
-    }
+    process.exit(EXIT_FAILURE)
   }
 })()
