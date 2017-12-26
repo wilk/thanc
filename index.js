@@ -79,15 +79,19 @@ const generateLockFile = async projectPath => {
     }
 
     // loading npm
-    npm.load({}, err => {
+    // generating package-lock.json file, without installing deps, ignoring pre-post install scripts
+    // and doing it silently
+    // @todo: silent: true does not work, due to a regression bug
+    npm.load({
+      'package-lock-only': true,
+      'ignore-scripts': true,
+      silent: true
+    }, err => {
       if (err) {
         console.log('Cannot load NPM')
         return reject(err)
       }
 
-      // generating package-lock.json file, without installing deps
-      npm.config.set('package-lock-only', true)
-      npm.config.set('ignore-scripts', true)
       npm.commands.install(tmpFolder, [], err => {
         if (err) {
           console.log('Cannot generate package-lock.json inside temp folder')
@@ -111,6 +115,32 @@ const generateLockFile = async projectPath => {
     .parse(process.argv)
 
   if (program.me) projectPath = __dirname
+
+  prompt.start()
+
+  // getting credentials from the user
+  let userInfo
+  try {
+    userInfo = await getUserInfo(schema)
+  } catch (err) {
+    console.log('Cannot fetch github user credentials')
+    console.error(err)
+
+    process.exit(EXIT_FAILURE)
+  }
+
+  // testing credentials
+  const auth = {username: userInfo.username, password: userInfo.password}
+  try {
+    process.stdout.write('Testing github credentials... ')
+    await axios({url: GITHUB_API_URL, method: 'get', auth})
+    console.log('done!')
+  } catch (err) {
+    console.log('Invalid credentials or maximum number of login attempts exceeded')
+    console.error(err)
+
+    process.exit(EXIT_FAILURE)
+  }
 
   let manifest, manifestExists = true
 
@@ -162,7 +192,7 @@ const generateLockFile = async projectPath => {
   // getting deps repos
   let deps = []
   try {
-    process.stdout.write('Getting dependencies... ')
+    console.log('Getting dependencies... ')
     deps = await Promise.all(depsPromises)
     console.log('done!')
   } catch (err) {
@@ -181,39 +211,12 @@ const generateLockFile = async projectPath => {
     repos[splitUrl[splitUrl.length - 1].replace('.git', '')] = splitUrl[splitUrl.length - 2]
   })
 
-  prompt.start()
-
-  // getting credentials from the user
-  let userInfo
-  try {
-    process.stdout.write('Requesting user info... ')
-    userInfo = await getUserInfo(schema)
-    console.log('done!')
-  } catch (err) {
-    console.log('Cannot fetch github user credentials')
-    console.error(err)
-
-    process.exit(EXIT_FAILURE)
-  }
-
-  // testing credentials
-  const auth = {username: userInfo.username, password: userInfo.password}
-  try {
-    process.stdout.write('Testing github credentials... ')
-    await axios({url: GITHUB_API_URL, method: 'get', auth})
-    console.log('done!')
-  } catch (err) {
-    console.log('Invalid credentials or maximum number of login attempts exceeded')
-    console.error(err)
-
-    process.exit(EXIT_FAILURE)
-  }
-
   // starring repos
   try {
-    process.stdout.write('Starring dependencies... ')
+    console.log('Starring dependencies... ')
     await Promise.all(Object.keys(repos).map(repo => axios({url: `${GITHUB_STAR_URL}/${repos[repo]}/${repo}`, method: 'put', auth})))
     console.log('done!')
+    console.log(`Starred ${Object.keys(repos).length} repos!`)
   } catch (err) {
     console.log('Cannot star dependencies')
     console.error(err)
