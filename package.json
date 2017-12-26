@@ -16,6 +16,10 @@
     "node": ">=8.5.0",
     "npm": ">=5.3.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wilk/thanc"
+  },
   "license": "MIT",
   "dependencies": {
     "axios": "^0.17.1",

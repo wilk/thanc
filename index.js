@@ -9,7 +9,14 @@ const npm = require('npm')
 const os = require('os')
 const RegistryClient = require('npm-registry-client')
 
-const client = new RegistryClient()
+const client = new RegistryClient({
+  log: {
+    verbose() {},
+    info() {},
+    verbose() {},
+    http() {}
+  }
+})
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org'
 const GITHUB_API_URL = 'https://api.github.com'
 const GITHUB_STAR_URL = `${GITHUB_API_URL}/user/starred`
@@ -109,7 +116,7 @@ const generateLockFile = async projectPath => {
 
   // looking for package.json file
   try {
-    console.log('Reading package-lock.json file...')
+    process.stdout.write('Reading package-lock.json file... ')
     manifest = fs.readFileSync(path.resolve(projectPath, './package-lock.json'), 'utf-8')
   } catch (err) {
     manifestExists = false
@@ -117,7 +124,7 @@ const generateLockFile = async projectPath => {
 
   if (!manifestExists) {
     try {
-      console.log('package-lock.json does not exist in this folder: generating it from package.json...')
+      console.log('package-lock.json does not exist in this folder: generating it from package.json... ')
       const manifestPath = await generateLockFile(projectPath)
       manifest = fs.readFileSync(manifestPath, 'utf-8')
     } catch (err) {
@@ -139,6 +146,9 @@ const generateLockFile = async projectPath => {
 
   console.log('done!')
 
+  // add thanc as a dependency to star
+  if (program.me) manifest.dependencies['thanc'] = {version: thancPkg.version}
+
   // generating deps repos promises
   const depsPromises = Object.keys(manifest.dependencies).map(dep => {
     return new Promise((resolve, reject) => {
@@ -152,7 +162,7 @@ const generateLockFile = async projectPath => {
   // getting deps repos
   let deps = []
   try {
-    console.log('Getting dependencies...')
+    process.stdout.write('Getting dependencies... ')
     deps = await Promise.all(depsPromises)
     console.log('done!')
   } catch (err) {
@@ -176,7 +186,7 @@ const generateLockFile = async projectPath => {
   // getting credentials from the user
   let userInfo
   try {
-    console.log('Requesting user info...')
+    process.stdout.write('Requesting user info... ')
     userInfo = await getUserInfo(schema)
     console.log('done!')
   } catch (err) {
@@ -189,7 +199,7 @@ const generateLockFile = async projectPath => {
   // testing credentials
   const auth = {username: userInfo.username, password: userInfo.password}
   try {
-    console.log('Testing github credentials...')
+    process.stdout.write('Testing github credentials... ')
     await axios({url: GITHUB_API_URL, method: 'get', auth})
     console.log('done!')
   } catch (err) {
@@ -201,7 +211,7 @@ const generateLockFile = async projectPath => {
 
   // starring repos
   try {
-    console.log('Starring dependencies...')
+    process.stdout.write('Starring dependencies... ')
     await Promise.all(Object.keys(repos).map(repo => axios({url: `${GITHUB_STAR_URL}/${repos[repo]}/${repo}`, method: 'put', auth})))
     console.log('done!')
   } catch (err) {
