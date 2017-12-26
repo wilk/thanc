@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const axios = require('axios')
 const prompt = require('prompt')
 const fs = require('fs')

@@ -1,6 +1,6 @@
 {
   "name": "thanc",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Thanc: a smart way to thank NPM packages authors by starring their repos",
   "main": "index.js",
   "scripts": {
@@ -11,6 +11,7 @@
     "email": "wilk3ert@gmail.com",
     "url": "https://github.com/wilk"
   },
+  "bin": "index.js",
   "engines": {
     "node": ">=8.5.0",
     "npm": ">=5.3.0"
