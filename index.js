@@ -1,16 +1,17 @@
-const RegistryClient = require('npm-registry-client')
-const client = new RegistryClient()
-const NPM_REGISTRY_URL = 'https://registry.npmjs.org'
-const GITHUB_API_URL = 'https://api.github.com'
-const GITHUB_STAR_URL = `${GITHUB_API_URL}/user/starred`
 const axios = require('axios')
 const prompt = require('prompt')
 const fs = require('fs')
-const EXIT_FAILURE = 1
 const program = require('commander')
 const path = require('path')
 const npm = require('npm')
 const os = require('os')
+const RegistryClient = require('npm-registry-client')
+
+const client = new RegistryClient()
+const NPM_REGISTRY_URL = 'https://registry.npmjs.org'
+const GITHUB_API_URL = 'https://api.github.com'
+const GITHUB_STAR_URL = `${GITHUB_API_URL}/user/starred`
+const EXIT_FAILURE = 1
 
 const schema = {
   properties: {
@@ -38,8 +39,10 @@ const getUserInfo = schema => {
   })
 }
 
+// generate lock file from package.json
 const generateLockFile = async projectPath => {
   return new Promise((resolve, reject) => {
+    // testing package.json (if it does exist or not)
     let packageJsonPath = path.resolve(projectPath, './package.json')
     try {
       fs.accessSync(packageJsonPath, fs.constants.R_OK)
@@ -48,6 +51,7 @@ const generateLockFile = async projectPath => {
       return reject(err)
     }
 
+    // creating tmp folder
     let tmpFolder
     try {
       tmpFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'thanc-'))
@@ -56,6 +60,7 @@ const generateLockFile = async projectPath => {
       return reject(err)
     }
 
+    // copying package.json into tmp folder
     try {
       fs.copyFileSync(packageJsonPath, `${tmpFolder}/package.json`)
     } catch (err) {
@@ -63,12 +68,14 @@ const generateLockFile = async projectPath => {
       return reject(err)
     }
 
+    // loading npm
     npm.load({}, err => {
       if (err) {
         console.log('Cannot load NPM')
         return reject(err)
       }
 
+      // generating package-lock.json file, without installing deps
       npm.config.set('package-lock-only', true)
       npm.commands.install(tmpFolder, [], err => {
         if (err) {
@@ -112,6 +119,7 @@ const generateLockFile = async projectPath => {
   }
 
   try {
+    // parsing package-lock.json file
     manifest = JSON.parse(manifest)
   } catch (err) {
     console.log('Cannot parse package-lock.json file')
