@@ -14,6 +14,7 @@ const NPM_REGISTRY_URL = 'https://registry.npmjs.org'
 const GITHUB_API_URL = 'https://api.github.com'
 const GITHUB_STAR_URL = `${GITHUB_API_URL}/user/starred`
 const EXIT_FAILURE = 1
+const thancPkg = require('./package.json')
 
 const schema = {
   properties: {
@@ -79,6 +80,7 @@ const generateLockFile = async projectPath => {
 
       // generating package-lock.json file, without installing deps
       npm.config.set('package-lock-only', true)
+      npm.config.set('ignore-scripts', true)
       npm.commands.install(tmpFolder, [], err => {
         if (err) {
           console.log('Cannot generate package-lock.json inside temp folder')
@@ -94,9 +96,14 @@ const generateLockFile = async projectPath => {
 (async () => {
   let projectPath = '.'
   program
+    .version(thancPkg.version)
+    .usage('[options] <project_path>')
+    .option('--me', 'thank thanc package and all of its dependencies')
     .arguments('<path>')
     .action(path => projectPath = path ? path : projectPath)
     .parse(process.argv)
+
+  if (program.me) projectPath = __dirname
 
   let manifest, manifestExists = true
 
