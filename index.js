@@ -8,6 +8,7 @@ const path = require('path')
 const npm = require('npm')
 const os = require('os')
 const RegistryClient = require('npm-registry-client')
+const ProgressBar = require('progress')
 
 const client = new RegistryClient({
   log: {
@@ -22,6 +23,7 @@ const GITHUB_API_URL = 'https://api.github.com'
 const GITHUB_STAR_URL = `${GITHUB_API_URL}/user/starred`
 const EXIT_FAILURE = 1
 const thancPkg = require('./package.json')
+const CHUNK_SIZE = 35
 
 const schema = {
   properties: {
@@ -110,34 +112,39 @@ const generateLockFile = async projectPath => {
     .version(thancPkg.version)
     .usage('[options] <project_path>')
     .option('--me', 'thank thanc package and all of its dependencies')
+    .option('-u, --username <username>', 'your Github username')
+    .option('-p, --password <password>', 'your Github password')
     .arguments('<path>')
     .action(path => projectPath = path ? path : projectPath)
     .parse(process.argv)
 
   if (program.me) projectPath = __dirname
 
-  prompt.start()
+  let auth
+  // non-interactive usage
+  if (program.username && program.password) auth = {username: program.username, password: program.password}
+  else {
+    prompt.start()
 
-  // getting credentials from the user
-  let userInfo
-  try {
-    userInfo = await getUserInfo(schema)
-  } catch (err) {
-    console.log('Cannot fetch github user credentials')
-    console.error(err)
+    // getting credentials from the user
+    try {
+      auth = await getUserInfo(schema)
+    } catch (err) {
+      console.log('Cannot fetch github user credentials')
+      console.error(err)
 
-    process.exit(EXIT_FAILURE)
+      process.exit(EXIT_FAILURE)
+    }
   }
 
   // testing credentials
-  const auth = {username: userInfo.username, password: userInfo.password}
   try {
     process.stdout.write('Testing github credentials... ')
     await axios({url: GITHUB_API_URL, method: 'get', auth})
     console.log('done!')
   } catch (err) {
-    console.log('Invalid credentials or maximum number of login attempts exceeded')
-    console.error(err)
+    if (err && err.response && err.response.data && err.response.data.message) console.log(err.response.data.message)
+    else console.error(err)
 
     process.exit(EXIT_FAILURE)
   }
@@ -154,10 +161,11 @@ const generateLockFile = async projectPath => {
 
   if (!manifestExists) {
     try {
-      console.log('package-lock.json does not exist in this folder: generating it from package.json... ')
+      process.stdout.write("\npackage-lock.json does not exist in this folder: generating it from package.json... ")
       const manifestPath = await generateLockFile(projectPath)
       manifest = fs.readFileSync(manifestPath, 'utf-8')
     } catch (err) {
+      console.log('Cannot generate package-lock.json file')
       console.error(err)
 
       process.exit(EXIT_FAILURE)
@@ -168,9 +176,8 @@ const generateLockFile = async projectPath => {
     // parsing package-lock.json file
     manifest = JSON.parse(manifest)
   } catch (err) {
-    console.log('Cannot parse package-lock.json file')
+    console.log('Cannot parse package-lock.json file: invalid JSON')
 
-    console.error(err)
     process.exit(EXIT_FAILURE)
   }
 
@@ -182,7 +189,6 @@ const generateLockFile = async projectPath => {
   // generating deps repos promises
   const depsPromises = Object.keys(manifest.dependencies).map(dep => {
     return new Promise((resolve, reject) => {
-      // @todo: make 5 or 10 requests per time and then wait 1 second, or maybe 1 second for each one
       client.get(`${NPM_REGISTRY_URL}/${dep}`, {}, (err, data) => {
         if (err) reject(err)
         else resolve(data.versions[manifest.dependencies[dep].version])
@@ -193,7 +199,7 @@ const generateLockFile = async projectPath => {
   // getting deps repos
   let deps = []
   try {
-    console.log('Getting dependencies... ')
+    process.stdout.write('Getting dependencies... ')
     deps = await Promise.all(depsPromises)
     console.log('done!')
   } catch (err) {
@@ -219,13 +225,13 @@ const generateLockFile = async projectPath => {
     repos[splitUrl[splitUrl.length - 1].replace('.git', '')] = owner
   })
 
-  const reposKeys = Object.keys(repos),
-    CHUNK_SIZE = 10
-
+  const reposKeys = Object.keys(repos)
   let reposMatrix = []
   if (reposKeys.length > CHUNK_SIZE) {
+    // split repos in subset of CHUNK_SIZE length
     const loops = Math.floor(reposKeys.length / CHUNK_SIZE)
 
+    // fill the reposMatrix (array of arrays)
     for (let i = 0; i < loops; i++) {
       const chunk = []
       for (let j = 0; j < CHUNK_SIZE; j++) {
@@ -235,6 +241,7 @@ const generateLockFile = async projectPath => {
       reposMatrix.push(chunk)
     }
 
+    // last array
     const diff = reposKeys.length % CHUNK_SIZE
     if (diff > 0) {
       const chunk = []
@@ -247,10 +254,20 @@ const generateLockFile = async projectPath => {
   } else reposMatrix = reposKeys
 
   try {
-    console.log('Starring dependencies... ')
+    process.stdout.write('Starring dependencies... ')
+
     let invalidRepoUrl = 0
+    const bar = new ProgressBar('  starring [:bar] :percent', {
+      complete: '=',
+      incomplete: ' ',
+      width: 50,
+      total: reposMatrix.length
+    })
+
     await reposMatrix.reduce((promise, chunk) => {
       return promise.then(() => {
+        bar.tick()
+
         const promises = chunk.map(repo => {
           return axios({url: `${GITHUB_STAR_URL}/${repos[repo]}/${repo}`, method: 'put', auth})
         })
@@ -262,7 +279,8 @@ const generateLockFile = async projectPath => {
     console.log(`Starred ${Object.keys(repos).length - invalidRepoUrl} repos!`)
   } catch (err) {
     console.log('Cannot star dependencies')
-    console.error(err)
+    if (err && err.response && err.response.data && err.response.data.message) console.log(err.response.data.message)
+    else console.error(err)
 
     process.exit(EXIT_FAILURE)
   }

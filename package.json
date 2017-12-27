@@ -26,6 +26,7 @@
     "commander": "^2.12.2",
     "npm": "^5.6.0",
     "npm-registry-client": "^8.5.0",
+    "progress": "^2.0.0",
     "prompt": "^1.0.0"
   }
 }
