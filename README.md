@@ -6,9 +6,9 @@ Thanc: a smart way to thank NPM packages authors by starring their repos
 $ npm i -D thanc
 ```
 
-Then, under the scripts section of the package.json:
+Then, under the scripts section of your `package.json`:
 ```bash
-"thanc": "thanc"
+"thanc": "thanc ."
 ```
 
 And then:
@@ -39,8 +39,14 @@ Thank a specific folder:
 $ thanc myProject
 ```
 
-Thank thanc project:
+Thank the `thanc` project:
 
 ```bash
 $ thanc --me
+```
+
+Thank with non-interactive way:
+
+```bash
+$ thanc -u <your_github_username> -p <your_github_password> .
 ```
