@@ -83,11 +83,11 @@ const generateLockFile = async projectPath => {
     // loading npm
     // generating package-lock.json file, without installing deps, ignoring pre-post install scripts
     // and doing it silently
-    // @todo: silent: true does not work, due to a regression bug
+    // @todo: silent: true does not work, due to a regression bug: https://github.com/npm/npm/issues/7990#issuecomment-353955251
     npm.load({
       'package-lock-only': true,
       'ignore-scripts': true,
-      silent: true
+      loglevel: 'silent'
     }, err => {
       if (err) {
         console.log('Cannot load NPM')
