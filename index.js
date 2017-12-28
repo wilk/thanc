@@ -87,7 +87,8 @@ const generateLockFile = async projectPath => {
     npm.load({
       'package-lock-only': true,
       'ignore-scripts': true,
-      loglevel: 'silent'
+      loglevel: 'silent',
+      progress: false
     }, err => {
       if (err) {
         console.log('Cannot load NPM')
