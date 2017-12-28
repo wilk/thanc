@@ -1,6 +1,6 @@
 {
   "name": "thanc",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Thanc: a smart way to thank NPM packages authors by starring their repos",
   "main": "index.js",
   "scripts": {
