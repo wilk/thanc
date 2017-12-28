@@ -162,7 +162,7 @@ const generateLockFile = async projectPath => {
 
   if (!manifestExists) {
     try {
-      process.stdout.write("\npackage-lock.json does not exist in this folder: generating it from package.json... ")
+      process.stdout.write("\npackage-lock.json does not exist in this folder: generating a temporary one from package.json... ")
       const manifestPath = await generateLockFile(projectPath)
       manifest = fs.readFileSync(manifestPath, 'utf-8')
     } catch (err) {
@@ -183,6 +183,12 @@ const generateLockFile = async projectPath => {
   }
 
   console.log('done!')
+
+  if (manifest.dependencies === null || typeof manifest.dependencies === 'undefined') {
+    console.log('This project has no dependencies to star')
+
+    process.exit(EXIT_FAILURE)
+  }
 
   // add thanc as a dependency to star
   if (program.me) manifest.dependencies['thanc'] = {version: thancPkg.version}
