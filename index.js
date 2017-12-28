@@ -192,7 +192,7 @@ const generateLockFile = async projectPath => {
     return new Promise(resolve => {
       client.get(`${NPM_REGISTRY_URL}/${dep}`, {}, (err, data) => {
         // discard non-existing repos
-        if (err) resolve(null)
+        if (err || !data.versions[manifest.dependencies[dep].version]) resolve(null)
         else resolve(data.versions[manifest.dependencies[dep].version])
       })
     })
@@ -215,7 +215,7 @@ const generateLockFile = async projectPath => {
   // generating repos object: keys are repos and values are owners
   const repos = {}
   deps.forEach((detail) => {
-    if (!detail.repository) return
+    if (!detail || !detail.repository) return
 
     // covering /<owner>/<repo> urls
     const splitUrl = detail.repository.url.split('/')
