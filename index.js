@@ -189,9 +189,10 @@ const generateLockFile = async projectPath => {
 
   // generating deps repos promises
   const depsPromises = Object.keys(manifest.dependencies).map(dep => {
-    return new Promise((resolve, reject) => {
+    return new Promise(resolve => {
       client.get(`${NPM_REGISTRY_URL}/${dep}`, {}, (err, data) => {
-        if (err) reject(err)
+        // discard non-existing repos
+        if (err) resolve(null)
         else resolve(data.versions[manifest.dependencies[dep].version])
       })
     })
@@ -202,6 +203,7 @@ const generateLockFile = async projectPath => {
   try {
     process.stdout.write('Getting dependencies... ')
     deps = await Promise.all(depsPromises)
+    deps = deps.filter(dep => dep !== null)
     console.log('done!')
   } catch (err) {
     console.log('Cannot fetch dependencies\' repos')
