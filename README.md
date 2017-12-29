@@ -1,5 +1,5 @@
 # thanc
-thanc: a smart way to thank the authors of NPM packages by starring their repos on Github
+thanc: a smart way to thank the authors of NPM packages by starring their repos on Github :heart:
 
 Inspired by:
 
@@ -10,6 +10,12 @@ Inspired by:
 Basically, because the thank (and also thanks) package already exists on NPM registry.
 
 Thanc (or thancian) is the ancient english word to say thank, so that's why :bowtie:
+
+## Authentication Types Supported
+thanc supports two types of authentication:
+
+- **Basic**: it requires your Github username and password
+- **Token**: it requires one of your Github user token (just **[create a new token](https://github.com/settings/tokens/new)** here with `public_repo` permission)
 
 ## Installation
 thanc can be installed locally or globally.
@@ -60,8 +66,14 @@ $ thanc --me
 
 Thanking with non-interactive way:
 
+**Basic Auth**
 ```bash
 $ thanc -u <your_github_username> -p <your_github_password> .
+```
+
+**User Token**
+```bash
+$ thanc -t <your_github_token> .
 ```
 
 ## Limitations
