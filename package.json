@@ -1,7 +1,7 @@
 {
   "name": "thanc",
-  "version": "1.4.3",
-  "description": "Thanc: a smart way to thank NPM packages authors by starring their repos",
+  "version": "1.4.4",
+  "description": "thanc: a smart way to thank the authors of NPM packages by starring their repos on Github",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

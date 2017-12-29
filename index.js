@@ -9,6 +9,7 @@ const npm = require('npm')
 const os = require('os')
 const RegistryClient = require('npm-registry-client')
 const ProgressBar = require('progress')
+const thancPkg = require('./package.json')
 
 const client = new RegistryClient({
   log: {
@@ -22,7 +23,6 @@ const NPM_REGISTRY_URL = 'https://registry.npmjs.org'
 const GITHUB_API_URL = 'https://api.github.com'
 const GITHUB_STAR_URL = `${GITHUB_API_URL}/user/starred`
 const EXIT_FAILURE = 1
-const thancPkg = require('./package.json')
 const CHUNK_SIZE = 35
 
 const schema = {
@@ -59,7 +59,7 @@ const generateLockFile = async projectPath => {
     try {
       fs.accessSync(packageJsonPath, fs.constants.R_OK)
     } catch (err) {
-      console.log('Cannot find package.json: make sure to specify a Node.js project folder')
+      console.log("\nCannot find package.json: make sure to specify a Node.js project folder")
       return reject(err)
     }
 
@@ -68,7 +68,7 @@ const generateLockFile = async projectPath => {
     try {
       tmpFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'thanc-'))
     } catch (err) {
-      console.log('Cannot create temporary folder on the file system')
+      console.log("\nCannot create temporary folder on file system")
       return reject(err)
     }
 
@@ -76,14 +76,13 @@ const generateLockFile = async projectPath => {
     try {
       fs.copyFileSync(packageJsonPath, `${tmpFolder}/package.json`)
     } catch (err) {
-      console.log('Cannot copy package.json file on temp folder')
+      console.log("\nCannot copy package.json file on temp folder")
       return reject(err)
     }
 
     // loading npm
     // generating package-lock.json file, without installing deps, ignoring pre-post install scripts
     // and doing it silently
-    // @todo: silent: true does not work, due to a regression bug: https://github.com/npm/npm/issues/7990#issuecomment-353955251
     npm.load({
       'package-lock-only': true,
       'ignore-scripts': true,
@@ -91,13 +90,13 @@ const generateLockFile = async projectPath => {
       progress: false
     }, err => {
       if (err) {
-        console.log('Cannot load NPM')
+        console.log("\nCannot load NPM")
         return reject(err)
       }
 
       npm.commands.install(tmpFolder, [], err => {
         if (err) {
-          console.log('Cannot generate package-lock.json inside temp folder')
+          console.log("\nCannot generate package-lock.json inside temp folder")
           return reject(err)
         }
 
@@ -162,11 +161,12 @@ const generateLockFile = async projectPath => {
 
   if (!manifestExists) {
     try {
-      process.stdout.write("\npackage-lock.json does not exist in this folder: generating a temporary one from package.json... ")
+      console.log("\npackage-lock.json does not exist in this folder")
+      process.stdout.write('Generating a temporary package-lock.json from package.json... ')
       const manifestPath = await generateLockFile(projectPath)
       manifest = fs.readFileSync(manifestPath, 'utf-8')
     } catch (err) {
-      console.log('Cannot generate package-lock.json file')
+      console.log("\nCannot generate package-lock.json file")
       console.error(err)
 
       process.exit(EXIT_FAILURE)
@@ -177,7 +177,7 @@ const generateLockFile = async projectPath => {
     // parsing package-lock.json file
     manifest = JSON.parse(manifest)
   } catch (err) {
-    console.log('Cannot parse package-lock.json file: invalid JSON')
+    console.log("\nCannot parse package-lock.json file: invalid JSON")
 
     process.exit(EXIT_FAILURE)
   }
