@@ -1,6 +1,11 @@
 # thanc
 thanc: a smart way to thank the authors of NPM packages by starring their repos on Github
 
+Inspired by:
+
+- https://github.com/zwilias/elm-thanks
+- https://github.com/symfony/thanks
+
 ## Why thanc and not just thank?!?
 Basically, because the thank (and also thanks) package already exists on NPM registry.
 

@@ -221,7 +221,7 @@ const generateLockFile = async projectPath => {
   // generating repos object: keys are repos and values are owners
   const repos = {}
   deps.forEach((detail) => {
-    if (!detail || !detail.repository) return
+    if (!detail || !detail.repository || !detail.repository.url) return
 
     // covering /<owner>/<repo> urls
     const splitUrl = detail.repository.url.split('/')
