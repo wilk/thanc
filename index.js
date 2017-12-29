@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 
-const axios = require('axios')
-const prompt = require('prompt')
+const GitHubApi = require('github')
 const fs = require('fs')
 const program = require('commander')
 const path = require('path')
-const npm = require('npm')
 const os = require('os')
 const RegistryClient = require('npm-registry-client')
 const ProgressBar = require('progress')
@@ -20,20 +18,31 @@ const client = new RegistryClient({
   }
 })
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org'
-const GITHUB_API_URL = 'https://api.github.com'
-const GITHUB_STAR_URL = `${GITHUB_API_URL}/user/starred`
 const EXIT_FAILURE = 1
 const CHUNK_SIZE = 35
+const github = new GitHubApi()
 
-const schema = {
+const authTypeSchema = {
+  properties: {
+    type: {
+      description: 'Define the Github authentication type you want to use (basic or token)',
+      message: 'The authentication types supported are "basic" and "token"',
+      required: true,
+      type: 'string',
+      pattern: /\b(basic|token)\b/
+    }
+  }
+}
+
+const basicAuthSchema = {
   properties: {
     username: {
-      description: 'Your github username',
+      description: 'Your Github username',
       type: 'string',
       required: true
     },
     password: {
-      description: 'Your github password',
+      description: 'Your Github password',
       type: 'string',
       hidden: true,
       required: true
@@ -41,8 +50,18 @@ const schema = {
   }
 }
 
-// get user info
-const getUserInfo = schema => {
+const tokenAuthSchema = {
+  properties: {
+    token: {
+      description: 'Your Github token',
+      type: 'string',
+      required: true
+    }
+  }
+}
+
+// prompt get wrapper with promise
+const promptGetAsync = (prompt, schema) => {
   return new Promise((resolve, reject) => {
     prompt.get(schema, function (err, data) {
       if (err) reject(err)
@@ -80,6 +99,9 @@ const generateLockFile = async projectPath => {
       return reject(err)
     }
 
+    // lazy loading for npm (used just in this case)
+    const npm = require('npm')
+
     // loading npm
     // generating package-lock.json file, without installing deps, ignoring pre-post install scripts
     // and doing it silently
@@ -114,6 +136,7 @@ const generateLockFile = async projectPath => {
     .option('--me', 'thank thanc package and all of its dependencies')
     .option('-u, --username <username>', 'your Github username')
     .option('-p, --password <password>', 'your Github password')
+    .option('-t, --token <password>', 'your Github token')
     .arguments('<path>')
     .action(path => projectPath = path ? path : projectPath)
     .parse(process.argv)
@@ -122,13 +145,21 @@ const generateLockFile = async projectPath => {
 
   let auth
   // non-interactive usage
-  if (program.username && program.password) auth = {username: program.username, password: program.password}
+  if (program.token || process.env.GITHUB_TOKEN) auth = {type: 'token', token: program.token || process.env.GITHUB_TOKEN}
+  else if (program.username && program.password) auth = {type: 'basic', username: program.username, password: program.password}
   else {
+    // lazy loading for prompt (used just in this case)
+    const prompt = require('prompt')
     prompt.start()
 
-    // getting credentials from the user
+    // getting auth type and user credentials
     try {
-      auth = await getUserInfo(schema)
+      const authType = await promptGetAsync(prompt, authTypeSchema)
+
+      if (authType.type === 'token') auth = await promptGetAsync(prompt, tokenAuthSchema)
+      else auth = await promptGetAsync(prompt, basicAuthSchema)
+
+      auth.type = authType.type
     } catch (err) {
       console.log('Cannot fetch github user credentials')
       console.error(err)
@@ -137,14 +168,17 @@ const generateLockFile = async projectPath => {
     }
   }
 
-  // testing credentials
+  github.authenticate(auth)
+
+  // testing credentials by starring "thanc" repo
   try {
     process.stdout.write('Testing github credentials... ')
-    await axios({url: GITHUB_API_URL, method: 'get', auth})
+    await github.activity.starRepo({owner: 'wilk', repo: 'thanc'})
     console.log('done!')
   } catch (err) {
-    if (err && err.response && err.response.data && err.response.data.message) console.log(err.response.data.message)
-    else console.error(err)
+    let message = err.toString()
+    try {message = JSON.parse(err.message).message} catch (err) {}
+    console.log(message)
 
     process.exit(EXIT_FAILURE)
   }
@@ -277,19 +311,18 @@ const generateLockFile = async projectPath => {
       return promise.then(() => {
         bar.tick()
 
-        const promises = chunk.map(repo => {
-          return axios({url: `${GITHUB_STAR_URL}/${repos[repo]}/${repo}`, method: 'put', auth})
-        })
+        const promises = chunk.map(repo => github.activity.starRepo({owner: repos[repo], repo}))
 
         return Promise.all(promises)
-      }).catch(() => invalidRepoUrl++)
+      }).catch((res) => invalidRepoUrl++)
     }, Promise.resolve())
     console.log('done!')
     console.log(`Starred ${Object.keys(repos).length - invalidRepoUrl} repos!`)
   } catch (err) {
     console.log('Cannot star dependencies')
-    if (err && err.response && err.response.data && err.response.data.message) console.log(err.response.data.message)
-    else console.error(err)
+    let message = err.toString()
+    try {message = JSON.parse(err.message).message} catch (err) {}
+    console.log(message)
 
     process.exit(EXIT_FAILURE)
   }
