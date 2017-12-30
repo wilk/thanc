@@ -5,18 +5,10 @@ const fs = require('fs')
 const program = require('commander')
 const path = require('path')
 const os = require('os')
-const RegistryClient = require('npm-registry-client')
+const axios = require('axios')
 const chalk = require('chalk')
 const thancPkg = require('./package.json')
 
-const client = new RegistryClient({
-  log: {
-    verbose() {},
-    info() {},
-    verbose() {},
-    http() {}
-  }
-})
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org'
 const EXIT_FAILURE = 1
 const CHUNK_SIZE = 35
@@ -149,6 +141,19 @@ const starReposProgress = ({chunk, github, bar}) => {
   return Promise.all(promises)
 }
 
+// generate an array of dependencies, parsing the dependencies tree
+const parseDependenciesTree = deps => {
+  const dependencies = []
+
+  for (let dep in deps) {
+    dependencies.push({name: dep, version: deps[dep].version})
+
+    if (deps[dep].dependencies) dependencies.push(...parseDependenciesTree(deps[dep].dependencies))
+  }
+
+  return dependencies
+}
+
 (async () => {
   let projectPath = '.'
   program
@@ -243,18 +248,21 @@ const starReposProgress = ({chunk, github, bar}) => {
     process.exit(EXIT_FAILURE)
   }
 
+  // build dependencies array
+  const dependencies = parseDependenciesTree(manifest.dependencies)
+
   // add thanc as a dependency to star
-  if (program.me) manifest.dependencies[THANC_REPO] = {version: thancPkg.version}
+  if (program.me) dependencies.push({name: THANC_REPO, version: thancPkg.version})
 
   // generating deps repos promises
-  const depsPromises = Object.keys(manifest.dependencies).map(dep => {
-    return new Promise(resolve => {
-      client.get(`${NPM_REGISTRY_URL}/${dep}`, {}, (err, data) => {
-        // discard non-existing repos
-        if (err || !data.versions[manifest.dependencies[dep].version]) resolve(null)
-        else resolve(data.versions[manifest.dependencies[dep].version])
-      })
-    })
+  const depsPromises = dependencies.map(async ({name, version}) => {
+    try {
+      // encode scoped packages: @user/package -> @user%2f
+      // due to this: https://github.com/npm/npm-registry-client/issues/123#issuecomment-154840629
+      const encodedDep = name.replace(/\//g, '%2f')
+      const res = await axios.get(`${NPM_REGISTRY_URL}/${encodedDep}`)
+      return res.data.versions[version]
+    } catch (err) {return null}
   })
 
   // getting deps repos
