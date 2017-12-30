@@ -204,7 +204,7 @@ const parseDependenciesTree = deps => {
   } catch (err) {
     let message = err.toString()
     try {message = JSON.parse(err.message).message} catch (err) {}
-    console.log(message)
+    console.log(`☠  ${message} ☠`)
 
     process.exit(EXIT_FAILURE)
   }
@@ -355,7 +355,7 @@ const parseDependenciesTree = deps => {
     console.log('☠  Cannot star dependencies ☠')
     let message = err.toString()
     try {message = JSON.parse(err.message).message} catch (err) {}
-    console.log(message)
+    console.log(`☠  ${message} ☠`)
 
     process.exit(EXIT_FAILURE)
   }
