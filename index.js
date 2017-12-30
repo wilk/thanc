@@ -73,7 +73,7 @@ const generateLockFile = async projectPath => {
     try {
       fs.accessSync(packageJsonPath, fs.constants.R_OK)
     } catch (err) {
-      console.log("☠  Cannot find package.json: make sure to specify a Node.js project folder ☠")
+      console.log("\n☠  Cannot find package.json: make sure to specify a Node.js project folder ☠")
       return reject(err)
     }
 
@@ -82,7 +82,7 @@ const generateLockFile = async projectPath => {
     try {
       tmpFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'thanc-'))
     } catch (err) {
-      console.log("☠  Cannot create temporary folder on file system ☠")
+      console.log("\n☠  Cannot create temporary folder on file system ☠")
       return reject(err)
     }
 
@@ -90,7 +90,7 @@ const generateLockFile = async projectPath => {
     try {
       fs.copyFileSync(packageJsonPath, `${tmpFolder}/package.json`)
     } catch (err) {
-      console.log("☠  Cannot copy package.json file on temp folder ☠")
+      console.log("\n☠  Cannot copy package.json file on temp folder ☠")
       return reject(err)
     }
 
@@ -107,13 +107,13 @@ const generateLockFile = async projectPath => {
       progress: false
     }, err => {
       if (err) {
-        console.log("☠  Cannot load NPM ☠")
+        console.log("\n☠  Cannot load NPM ☠")
         return reject(err)
       }
 
       npm.commands.install(tmpFolder, [], err => {
         if (err) {
-          console.log("☠  Cannot generate package-lock.json inside temp folder ☠")
+          console.log("\n☠  Cannot generate package-lock.json inside temp folder ☠")
           return reject(err)
         }
 
@@ -235,10 +235,13 @@ const httpGetWrapper = (url, version) => {
     console.log('🔐  Testing github credentials... ')
     await github.activity.starRepo({owner: THANC_OWNER, repo: THANC_REPO})
   } catch (err) {
-    // @todo: custom message for rate limit exceeded error
     let message = err.toString()
     try {message = JSON.parse(err.message).message} catch (err) {}
-    console.log(`☠  ${message} ☠`)
+
+    if (message.includes('API rate limit exceeded')) message = `☠  ${message} (https://developer.github.com/v3/#rate-limiting 😞). Retry again next hour 👊 ☠`
+    else message = `☠  ${message} ☠`
+
+    console.log(message)
 
     process.exit(EXIT_FAILURE)
   }
@@ -261,7 +264,6 @@ const httpGetWrapper = (url, version) => {
       manifest = fs.readFileSync(manifestPath, 'utf-8')
     } catch (err) {
       console.log("☠️  Cannot generate package-lock.json file ☠️")
-      console.error(err)
 
       process.exit(EXIT_FAILURE)
     }
@@ -320,7 +322,7 @@ const httpGetWrapper = (url, version) => {
   // generating repos object: keys are repos and values are owners
   let repos = []
   deps.forEach((detail) => {
-    if (!detail || !detail.repository || !detail.repository.url) return
+    if (!detail || !detail.repository || !detail.repository.url || !detail.repository.url.includes('github.com')) return
 
     // covering /<owner>/<repo> urls
     const splitUrl = detail.repository.url.split('/')
@@ -401,7 +403,11 @@ const httpGetWrapper = (url, version) => {
     console.log('☠  Cannot star dependencies ☠')
     let message = err.toString()
     try {message = JSON.parse(err.message).message} catch (err) {}
-    console.log(`☠  ${message} ☠`)
+
+    if (message.includes('API rate limit exceeded')) message = `☠  ${message} (https://developer.github.com/v3/#rate-limiting 😞). Retry again next hour 👊 ☠`
+    else message = `☠  ${message} ☠`
+
+    console.log(message)
 
     process.exit(EXIT_FAILURE)
   }
