@@ -6,8 +6,7 @@ const fs = require('fs')
 const program = require('commander')
 const path = require('path')
 const os = require('os')
-// @todo: replace axios with base http requests
-const axios = require('axios')
+const https = require('https')
 const chalk = require('chalk')
 const thancPkg = require('./package.json')
 
@@ -156,6 +155,38 @@ const parseDependenciesTree = deps => {
   return dependencies
 }
 
+// promise wrapper for https.get
+const httpGetWrapper = (url, version) => {
+  return new Promise(resolve => {
+    https.get(url, res => {
+      const { statusCode } = res,
+        contentType = res.headers['content-type']
+
+      let err
+      if (statusCode !== 200) err = new Error(`Request Failed.\nStatus Code: ${statusCode}`)
+      else if (!/^application\/json/.test(contentType)) err = new Error(`Invalid content-type.\nExpected application/json but received ${contentType}`)
+
+      if (err) {
+        // consume response data to free up memory
+        res.resume()
+
+        return resolve(null)
+      }
+
+      res.setEncoding('utf8')
+      let rawData = ''
+      res.on('data', chunk => rawData += chunk)
+      res.on('end', () => {
+        try {
+          const data = JSON.parse(rawData)
+
+          resolve(data.versions[version])
+        } catch (err) {resolve(null)}
+      });
+    }).on('error', () => resolve(null))
+  })
+}
+
 (async () => {
   let projectPath = '.'
   program
@@ -266,14 +297,11 @@ const parseDependenciesTree = deps => {
   }, [])
 
   // generating deps repos promises
-  const depsPromises = dependencies.map(async ({name, version}) => {
-    try {
-      // encode scoped packages: @user/package -> @user%2f
-      // due to this: https://github.com/npm/npm-registry-client/issues/123#issuecomment-154840629
-      const encodedDep = name.replace(/\//g, '%2f')
-      const res = await axios.get(`${NPM_REGISTRY_URL}/${encodedDep}`)
-      return res.data.versions[version]
-    } catch (err) {return null}
+  const depsPromises = dependencies.map(({name, version}) => {
+    // encode scoped packages: @user/package -> @user%2f
+    // due to this: https://github.com/npm/npm-registry-client/issues/123#issuecomment-154840629
+    const encodedDep = name.replace(/\//g, '%2f')
+    return httpGetWrapper(`${NPM_REGISTRY_URL}/${encodedDep}`, version)
   })
 
   // getting deps repos

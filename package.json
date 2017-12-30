@@ -22,7 +22,6 @@
   },
   "license": "MIT",
   "dependencies": {
-    "axios": "^0.17.1",
     "chalk": "^2.3.0",
     "commander": "^2.12.2",
     "github": "^13.0.1",
