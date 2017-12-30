@@ -1,6 +1,6 @@
 {
   "name": "thanc",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "description": "thanc: a smart way to thank the authors of NPM packages by starring their repos on Github",
   "main": "dist.js",
   "scripts": {
