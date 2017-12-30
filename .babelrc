@@ -1,0 +1,19 @@
+{
+  "plugins": [
+    ["transform-runtime", {
+      "polyfill": true,
+      "regenerator": true
+    }]
+  ],
+  "presets": [
+    ["env", {
+      "targets": {
+        "node": "4.0.0"
+      }
+    }],
+    ["minify", {
+      "mangle": false,
+      "evaluate": false
+    }]
+  ]
+}

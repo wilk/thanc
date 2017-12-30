@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
+// @todo: replace github with base http requests
 const GitHubApi = require('github')
 const fs = require('fs')
 const program = require('commander')
 const path = require('path')
 const os = require('os')
+// @todo: replace axios with base http requests
 const axios = require('axios')
 const chalk = require('chalk')
 const thancPkg = require('./package.json')
@@ -202,6 +204,7 @@ const parseDependenciesTree = deps => {
     console.log('🔐  Testing github credentials... ')
     await github.activity.starRepo({owner: THANC_OWNER, repo: THANC_REPO})
   } catch (err) {
+    // @todo: custom message for rate limit exceeded error
     let message = err.toString()
     try {message = JSON.parse(err.message).message} catch (err) {}
     console.log(`☠  ${message} ☠`)

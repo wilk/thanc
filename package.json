@@ -2,16 +2,16 @@
   "name": "thanc",
   "version": "1.6.2",
   "description": "thanc: a smart way to thank the authors of NPM packages by starring their repos on Github",
-  "main": "index.js",
+  "main": "dist.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "babel index.js --out-file dist.js"
   },
   "author": {
     "name": "Vincenzo (Wilk) Ferrari",
     "email": "wilk3ert@gmail.com",
     "url": "https://github.com/wilk"
   },
-  "bin": "index.js",
+  "bin": "dist.js",
   "engines": {
     "node": ">=8.5.0",
     "npm": ">=5.3.0"
@@ -29,5 +29,11 @@
     "npm": "^5.6.0",
     "progress": "^2.0.0",
     "prompt": "^1.0.0"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-plugin-transform-runtime": "^6.23.0",
+    "babel-preset-env": "^1.6.1",
+    "babel-preset-minify": "^0.2.0"
   }
 }
