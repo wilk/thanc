@@ -10,7 +10,7 @@ This is what thanc looks like:
 
 and too many repos after:
 
-![stop](https://github.com/wilk/thanc/raw/master/stop.png "stop")
+![end](https://github.com/wilk/thanc/raw/master/end.png "end")
 
 Inspired by:
 
