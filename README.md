@@ -1,6 +1,17 @@
 # thanc
 thanc: a smart way to thank the authors of NPM packages by starring their repos on Github :heart:
 
+Why thanc you'll thank every dependencies and sub-dependencies (**literally the whole dependencies tree**) of a given project provided with a `package.json` (or better a `package-lock.json`) manifest.
+So yes, it works also with `yarn` 😜
+
+This is what thanc looks like:
+
+![start](https://github.com/wilk/thanc/raw/master/start.png "start")
+
+and too many repos after:
+
+![stop](https://github.com/wilk/thanc/raw/master/stop.png "stop")
+
 Inspired by:
 
 - https://github.com/zwilias/elm-thanks
