@@ -6,7 +6,7 @@ const program = require('commander')
 const path = require('path')
 const os = require('os')
 const RegistryClient = require('npm-registry-client')
-const ProgressBar = require('progress')
+const chalk = require('chalk')
 const thancPkg = require('./package.json')
 
 const client = new RegistryClient({
@@ -20,6 +20,8 @@ const client = new RegistryClient({
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org'
 const EXIT_FAILURE = 1
 const CHUNK_SIZE = 35
+const THANC_OWNER = 'wilk'
+const THANC_REPO = 'thanc'
 const github = new GitHubApi()
 
 const authTypeSchema = {
@@ -78,7 +80,7 @@ const generateLockFile = async projectPath => {
     try {
       fs.accessSync(packageJsonPath, fs.constants.R_OK)
     } catch (err) {
-      console.log("\nCannot find package.json: make sure to specify a Node.js project folder")
+      console.log("☠  Cannot find package.json: make sure to specify a Node.js project folder ☠")
       return reject(err)
     }
 
@@ -87,7 +89,7 @@ const generateLockFile = async projectPath => {
     try {
       tmpFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'thanc-'))
     } catch (err) {
-      console.log("\nCannot create temporary folder on file system")
+      console.log("☠  Cannot create temporary folder on file system ☠")
       return reject(err)
     }
 
@@ -95,7 +97,7 @@ const generateLockFile = async projectPath => {
     try {
       fs.copyFileSync(packageJsonPath, `${tmpFolder}/package.json`)
     } catch (err) {
-      console.log("\nCannot copy package.json file on temp folder")
+      console.log("☠  Cannot copy package.json file on temp folder ☠")
       return reject(err)
     }
 
@@ -112,13 +114,13 @@ const generateLockFile = async projectPath => {
       progress: false
     }, err => {
       if (err) {
-        console.log("\nCannot load NPM")
+        console.log("☠  Cannot load NPM ☠")
         return reject(err)
       }
 
       npm.commands.install(tmpFolder, [], err => {
         if (err) {
-          console.log("\nCannot generate package-lock.json inside temp folder")
+          console.log("☠  Cannot generate package-lock.json inside temp folder ☠")
           return reject(err)
         }
 
@@ -126,6 +128,25 @@ const generateLockFile = async projectPath => {
       })
     })
   })
+}
+
+// star repos and list them
+const starReposList = ({chunk, github}) => {
+  const promises = chunk.map(({owner, repo}) => {
+    console.log(`⭐️   ${chalk.yellow('Thanks')} to ${chalk.yellow.bold(owner)} for ${chalk.yellow.bold(repo)}`)
+    return github.activity.starRepo({owner, repo})
+  })
+
+  return Promise.all(promises)
+}
+
+// star repos and increment the progress bar
+const starReposProgress = ({chunk, github, bar}) => {
+  bar.tick()
+
+  const promises = chunk.map(({owner, repo}) => github.activity.starRepo({owner, repo}))
+
+  return Promise.all(promises)
 }
 
 (async () => {
@@ -137,6 +158,7 @@ const generateLockFile = async projectPath => {
     .option('-u, --username <username>', 'your Github username')
     .option('-p, --password <password>', 'your Github password')
     .option('-t, --token <password>', 'your Github token')
+    .option('-q, --quite', 'Show only the progress bar instead of the repos list')
     .arguments('<path>')
     .action(path => projectPath = path ? path : projectPath)
     .parse(process.argv)
@@ -161,7 +183,7 @@ const generateLockFile = async projectPath => {
 
       auth.type = authType.type
     } catch (err) {
-      console.log('Cannot fetch github user credentials')
+      console.log("\n☠  Cannot fetch github user credentials ☠")
       console.error(err)
 
       process.exit(EXIT_FAILURE)
@@ -172,9 +194,8 @@ const generateLockFile = async projectPath => {
 
   // testing credentials by starring "thanc" repo
   try {
-    process.stdout.write('Testing github credentials... ')
-    await github.activity.starRepo({owner: 'wilk', repo: 'thanc'})
-    console.log('done!')
+    console.log('🔐  Testing github credentials... ')
+    await github.activity.starRepo({owner: THANC_OWNER, repo: THANC_REPO})
   } catch (err) {
     let message = err.toString()
     try {message = JSON.parse(err.message).message} catch (err) {}
@@ -187,7 +208,7 @@ const generateLockFile = async projectPath => {
 
   // looking for package.json file
   try {
-    process.stdout.write('Reading package-lock.json file... ')
+    console.log('📄  Reading package-lock.json file... ')
     manifest = fs.readFileSync(path.resolve(projectPath, './package-lock.json'), 'utf-8')
   } catch (err) {
     manifestExists = false
@@ -195,12 +216,12 @@ const generateLockFile = async projectPath => {
 
   if (!manifestExists) {
     try {
-      console.log("\npackage-lock.json does not exist in this folder")
-      process.stdout.write('Generating a temporary package-lock.json from package.json... ')
+      console.log("⚡  ️package-lock.json does not exist in this folder ⚡️")
+      process.stdout.write('⚙️  Generating a temporary package-lock.json from package.json... ')
       const manifestPath = await generateLockFile(projectPath)
       manifest = fs.readFileSync(manifestPath, 'utf-8')
     } catch (err) {
-      console.log("\nCannot generate package-lock.json file")
+      console.log("☠️  Cannot generate package-lock.json file ☠️")
       console.error(err)
 
       process.exit(EXIT_FAILURE)
@@ -211,21 +232,19 @@ const generateLockFile = async projectPath => {
     // parsing package-lock.json file
     manifest = JSON.parse(manifest)
   } catch (err) {
-    console.log("\nCannot parse package-lock.json file: invalid JSON")
+    console.log("\n☠  Cannot parse package-lock.json file: invalid JSON ☠")
 
     process.exit(EXIT_FAILURE)
   }
 
-  console.log('done!')
-
   if (manifest.dependencies === null || typeof manifest.dependencies === 'undefined') {
-    console.log('This project has no dependencies to star')
+    console.log('☠  This project has no dependencies to star ☠')
 
     process.exit(EXIT_FAILURE)
   }
 
   // add thanc as a dependency to star
-  if (program.me) manifest.dependencies['thanc'] = {version: thancPkg.version}
+  if (program.me) manifest.dependencies[THANC_REPO] = {version: thancPkg.version}
 
   // generating deps repos promises
   const depsPromises = Object.keys(manifest.dependencies).map(dep => {
@@ -241,19 +260,18 @@ const generateLockFile = async projectPath => {
   // getting deps repos
   let deps = []
   try {
-    process.stdout.write('Getting dependencies... ')
+    console.log('📦  Getting dependencies... ')
     deps = await Promise.all(depsPromises)
     deps = deps.filter(dep => dep !== null)
-    console.log('done!')
   } catch (err) {
-    console.log('Cannot fetch dependencies\' repos')
+    console.log('☠  Cannot fetch dependencies\' repos ☠')
     console.error(err)
 
     process.exit(EXIT_FAILURE)
   }
 
   // generating repos object: keys are repos and values are owners
-  const repos = {}
+  const repos = []
   deps.forEach((detail) => {
     if (!detail || !detail.repository || !detail.repository.url) return
 
@@ -265,61 +283,68 @@ const generateLockFile = async projectPath => {
     const ownerSplit = owner.split(':')
     if (ownerSplit.length > 1 && ownerSplit[1].length > 0) owner = ownerSplit[1]
 
-    repos[splitUrl[splitUrl.length - 1].replace('.git', '')] = owner
+    repos.push({owner, repo: splitUrl[splitUrl.length - 1].replace('.git', '')})
   })
 
-  const reposKeys = Object.keys(repos)
+  // sort by owner asc
+  repos.sort((a, b) => {
+    if (a.owner.toLowerCase() < b.owner.toLowerCase()) return -1
+    if (a.owner.toLowerCase() > b.owner.toLowerCase()) return 1
+    return 0
+  })
+
   let reposMatrix = []
-  if (reposKeys.length > CHUNK_SIZE) {
+  if (repos.length > CHUNK_SIZE) {
     // split repos in subset of CHUNK_SIZE length
-    const loops = Math.floor(reposKeys.length / CHUNK_SIZE)
+    const loops = Math.floor(repos.length / CHUNK_SIZE)
 
     // fill the reposMatrix (array of arrays)
     for (let i = 0; i < loops; i++) {
       const chunk = []
       for (let j = 0; j < CHUNK_SIZE; j++) {
-        chunk.push(reposKeys[(i * CHUNK_SIZE) + j])
+        chunk.push(repos[(i * CHUNK_SIZE) + j])
       }
 
       reposMatrix.push(chunk)
     }
 
     // last array
-    const diff = reposKeys.length % CHUNK_SIZE
+    const diff = repos.length % CHUNK_SIZE
     if (diff > 0) {
       const chunk = []
       for (let i = 0; i < diff; i++) {
-        chunk.push(reposKeys[reposKeys.length - diff + i])
+        chunk.push(repos[repos.length - diff + i])
       }
 
       reposMatrix.push(chunk)
     }
-  } else reposMatrix = reposKeys
+  } else reposMatrix = repos
 
   try {
-    process.stdout.write('Starring dependencies... ')
+    let starRepo = starReposList, bar
+    if (program.quite) {
+      const ProgressBar = require('progress')
+
+      bar = new ProgressBar("🌟  Starring dependencies... [:bar] :percent", {
+        complete: '=',
+        incomplete: ' ',
+        width: 50,
+        total: reposMatrix.length
+      })
+
+      starRepo = starReposProgress
+    } else console.log("🌟  Starring dependencies...\n")
 
     let invalidRepoUrl = 0
-    const bar = new ProgressBar('  starring [:bar] :percent', {
-      complete: '=',
-      incomplete: ' ',
-      width: 50,
-      total: reposMatrix.length
-    })
-
-    await reposMatrix.reduce((promise, chunk) => {
-      return promise.then(() => {
-        bar.tick()
-
-        const promises = chunk.map(repo => github.activity.starRepo({owner: repos[repo], repo}))
-
-        return Promise.all(promises)
-      }).catch((res) => invalidRepoUrl++)
+    await reposMatrix.reduce(async (promise, chunk) => {
+      try {
+        await promise
+        return starRepo({chunk, github, bar})
+      } catch (err) {invalidRepoUrl++}
     }, Promise.resolve())
-    console.log('done!')
-    console.log(`Starred ${Object.keys(repos).length - invalidRepoUrl} repos!`)
+    console.log(`\n✨  Starred ${chalk.yellow.bold(repos.length - invalidRepoUrl)} repos! ✨`)
   } catch (err) {
-    console.log('Cannot star dependencies')
+    console.log('☠  Cannot star dependencies ☠')
     let message = err.toString()
     try {message = JSON.parse(err.message).message} catch (err) {}
     console.log(message)
