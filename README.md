@@ -72,8 +72,21 @@ $ thanc -u <your_github_username> -p <your_github_password> .
 ```
 
 **User Token**
+
+Explicit:
 ```bash
 $ thanc -t <your_github_token> .
+```
+
+Via `GITHUB_TOKEN` env var:
+```bash
+$ export GITHUB_TOKEN=<your_github_token>; thanc .
+```
+
+Thanking without seeing the repos list but a progress bar instead:
+
+```bash
+$ thanc --quite .
 ```
 
 ## Limitations
