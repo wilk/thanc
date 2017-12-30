@@ -249,10 +249,18 @@ const parseDependenciesTree = deps => {
   }
 
   // build dependencies array
-  const dependencies = parseDependenciesTree(manifest.dependencies)
+  let dependencies = parseDependenciesTree(manifest.dependencies)
 
   // add thanc as a dependency to star
   if (program.me) dependencies.push({name: THANC_REPO, version: thancPkg.version})
+
+  // remove duplicates (same name and same version)
+  // packages with different versions might have different repo url
+  dependencies = dependencies.reduce((acc, dep) => {
+    if (acc.findIndex(({name, version}) => dep.name === name && dep.version === version) === -1) acc.push(dep)
+
+    return acc
+  }, [])
 
   // generating deps repos promises
   const depsPromises = dependencies.map(async ({name, version}) => {
@@ -268,18 +276,18 @@ const parseDependenciesTree = deps => {
   // getting deps repos
   let deps = []
   try {
-    console.log('📦  Getting dependencies... ')
+    console.log('📦  Getting dependencies info... ')
     deps = await Promise.all(depsPromises)
     deps = deps.filter(dep => dep !== null)
   } catch (err) {
-    console.log('☠  Cannot fetch dependencies\' repos ☠')
+    console.log('☠  Cannot fetch dependencies\' info ☠')
     console.error(err)
 
     process.exit(EXIT_FAILURE)
   }
 
   // generating repos object: keys are repos and values are owners
-  const repos = []
+  let repos = []
   deps.forEach((detail) => {
     if (!detail || !detail.repository || !detail.repository.url) return
 
@@ -291,8 +299,15 @@ const parseDependenciesTree = deps => {
     const ownerSplit = owner.split(':')
     if (ownerSplit.length > 1 && ownerSplit[1].length > 0) owner = ownerSplit[1]
 
-    repos.push({owner, repo: splitUrl[splitUrl.length - 1].replace('.git', '')})
+    repos.push({owner, repo: splitUrl[splitUrl.length - 1].replace('.git', ''), url: detail.repository.url})
   })
+
+  // remove duplicates with same repo url, even with different version
+  repos = repos.reduce((acc, repository) => {
+    if (acc.findIndex(({owner, repo, url}) => repository.owner === owner && repository.repo === repo && repository.url === url) === -1) acc.push(repository)
+
+    return acc
+  }, [])
 
   // sort by owner asc
   repos.sort((a, b) => {

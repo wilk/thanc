@@ -101,3 +101,5 @@ Some repos cannot be starred, due to:
 - missing repository property on package.json manifest
 - missing package on NPM registry (thanc relies on that)
 - missing repository on Github (thanc uses NPM registry info)
+
+Sometimes, some repos can be starred twice because they might have a very similar url but different, pointing to the same github repo
