@@ -64,7 +64,13 @@ Thanking the `thanc` project:
 $ thanc --me
 ```
 
-Thanking with non-interactive way:
+Thanking without seeing the repos list but a progress bar instead:
+
+```bash
+$ thanc --quite .
+```
+
+### Explicit credentials
 
 **Basic Auth**
 ```bash
@@ -81,12 +87,6 @@ $ thanc -t <your_github_token> .
 Via `GITHUB_TOKEN` env var:
 ```bash
 $ export GITHUB_TOKEN=<your_github_token>; thanc .
-```
-
-Thanking without seeing the repos list but a progress bar instead:
-
-```bash
-$ thanc --quite .
 ```
 
 ## Limitations
