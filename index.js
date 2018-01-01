@@ -244,8 +244,7 @@ const httpGetWrapper = (url, version) => {
     if (res.data.rate.remaining === 0) {
       console.log(`☠  Rate limit exceeded: (https://developer.github.com/v3/#rate-limiting 😞  ). Retry again next hour 👊  ☠`)
       process.exit(EXIT_FAILURE)
-    }
-    else {
+    } else {
       const rateLimitMsg = chalk.yellow.bold(`${res.data.rate.limit - res.data.rate.remaining}/${res.data.rate.limit}`)
       console.log(`⏳  You rate limit is ${rateLimitMsg} for this hour, so you still have ${chalk.yellow.bold(res.data.rate.remaining)} star to give!`)
     }
@@ -310,6 +309,12 @@ const httpGetWrapper = (url, version) => {
 
     return acc
   }, [])
+
+  if (dependencies.length === 0) {
+    console.log('☠  This project has no dependencies to star ☠')
+
+    process.exit(EXIT_FAILURE)
+  }
 
   // generating deps repos promises
   const depsBar = new ProgressBar('📦  Getting dependencies info... [:bar] :percent', Object.assign({}, PROGRESS_BAR_BASE_CONFIG, {total: dependencies.length}))
