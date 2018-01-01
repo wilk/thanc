@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 
-// @todo: replace github with base http requests
-const GitHubApi = require('github')
 const fs = require('fs')
-const program = require('commander')
 const path = require('path')
 const os = require('os')
 const https = require('https')
+
+// @todo: replace github with base http requests
+const GitHubApi = require('github')
+const program = require('commander')
 const chalk = require('chalk')
+const ProgressBar = require('progress')
+
 const thancPkg = require('./package.json')
 
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org'
@@ -16,6 +19,11 @@ const CHUNK_SIZE = 35
 const THANC_OWNER = 'wilk'
 const THANC_REPO = 'thanc'
 const github = new GitHubApi()
+const PROGRESS_BAR_BASE_CONFIG = {
+  complete: '=',
+  incomplete: ' ',
+  width: 50
+}
 
 const authTypeSchema = {
   properties: {
@@ -258,12 +266,12 @@ const httpGetWrapper = (url, version) => {
 
   if (!manifestExists) {
     try {
-      console.log("⚡  ️package-lock.json does not exist in this folder ⚡️")
+      console.log('⚡  ️package-lock.json does not exist in this folder ⚡️')
       process.stdout.write('⚙️  Generating a temporary package-lock.json from package.json... ')
       const manifestPath = await generateLockFile(projectPath)
       manifest = fs.readFileSync(manifestPath, 'utf-8')
     } catch (err) {
-      console.log("☠️  Cannot generate package-lock.json file ☠️")
+      console.log('☠️  Cannot generate package-lock.json file ☠️')
 
       process.exit(EXIT_FAILURE)
     }
@@ -299,17 +307,20 @@ const httpGetWrapper = (url, version) => {
   }, [])
 
   // generating deps repos promises
-  const depsPromises = dependencies.map(({name, version}) => {
+  const depsBar = new ProgressBar('📦  Getting dependencies info... [:bar] :percent', Object.assign({}, PROGRESS_BAR_BASE_CONFIG, {total: dependencies.length}))
+  const depsPromises = dependencies.map(async ({name, version}) => {
     // encode scoped packages: @user/package -> @user%2f
     // due to this: https://github.com/npm/npm-registry-client/issues/123#issuecomment-154840629
     const encodedDep = name.replace(/\//g, '%2f')
-    return httpGetWrapper(`${NPM_REGISTRY_URL}/${encodedDep}`, version)
+    const dep = await httpGetWrapper(`${NPM_REGISTRY_URL}/${encodedDep}`, version)
+    depsBar.tick()
+
+    return Promise.resolve(dep)
   })
 
   // getting deps repos
   let deps = []
   try {
-    console.log('📦  Getting dependencies info... ')
     deps = await Promise.all(depsPromises)
     deps = deps.filter(dep => dep !== null)
   } catch (err) {
@@ -379,9 +390,7 @@ const httpGetWrapper = (url, version) => {
   try {
     let starRepo = starReposList, bar
     if (program.quite) {
-      const ProgressBar = require('progress')
-
-      bar = new ProgressBar("🌟  Starring dependencies... [:bar] :percent", {
+      bar = new ProgressBar('🌟  Starring dependencies... [:bar] :percent', {
         complete: '=',
         incomplete: ' ',
         width: 50,
