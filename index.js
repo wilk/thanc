@@ -16,7 +16,6 @@ const thancPkg = require('./package.json')
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org'
 const EXIT_FAILURE = 1
 const CHUNK_SIZE = 35
-const THANC_OWNER = 'wilk'
 const THANC_REPO = 'thanc'
 const github = new GitHubApi()
 const PROGRESS_BAR_BASE_CONFIG = {
@@ -238,17 +237,23 @@ const httpGetWrapper = (url, version) => {
 
   github.authenticate(auth)
 
-  // testing credentials by starring "thanc" repo
+  // testing credentials by fetching user's rate limit
   try {
     console.log('🔐  Testing github credentials... ')
-    await github.activity.starRepo({owner: THANC_OWNER, repo: THANC_REPO})
+    const res = await github.misc.getRateLimit({})
+    if (res.data.rate.remaining === 0) {
+      console.log(`☠  Rate limit exceeded: (https://developer.github.com/v3/#rate-limiting 😞  ). Retry again next hour 👊  ☠`)
+      process.exit(EXIT_FAILURE)
+    }
+    else {
+      const rateLimitMsg = chalk.yellow.bold(`${res.data.rate.limit - res.data.rate.remaining}/${res.data.rate.limit}`)
+      console.log(`⏳  You rate limit is ${rateLimitMsg} for this hour, so you still have ${chalk.yellow.bold(res.data.rate.remaining)} star to give!`)
+    }
   } catch (err) {
     let message = err.toString()
     try {message = JSON.parse(err.message).message} catch (err) {}
 
-    if (message.includes('API rate limit exceeded')) message = `☠  ${message} (https://developer.github.com/v3/#rate-limiting 😞  ). Retry again next hour 👊  ☠`
-    else message = `☠  ${message} ☠`
-
+    message = `☠  ${message} ☠`
     console.log(message)
 
     process.exit(EXIT_FAILURE)
