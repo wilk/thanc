@@ -246,7 +246,7 @@ const httpGetWrapper = (url, version) => {
     let message = err.toString()
     try {message = JSON.parse(err.message).message} catch (err) {}
 
-    if (message.includes('API rate limit exceeded')) message = `☠  ${message} (https://developer.github.com/v3/#rate-limiting 😞). Retry again next hour 👊 ☠`
+    if (message.includes('API rate limit exceeded')) message = `☠  ${message} (https://developer.github.com/v3/#rate-limiting 😞  ). Retry again next hour 👊  ☠`
     else message = `☠  ${message} ☠`
 
     console.log(message)
