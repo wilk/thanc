@@ -10,10 +10,12 @@ const GitHubApi = require('github')
 const program = require('commander')
 const chalk = require('chalk')
 const ProgressBar = require('progress')
+const fetch = require('node-fetch')
 
 const thancPkg = require('./package.json')
 
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org'
+const GITHUB_API_URL = 'https://api.github.com'
 const EXIT_FAILURE = 1
 const CHUNK_SIZE = 35
 const THANC_REPO = 'thanc'
@@ -194,6 +196,16 @@ const httpGetWrapper = (url, version) => {
   })
 }
 
+// generate github headers
+const generateGithubHeaders = auth => {
+  const headers = {
+    accept: 'application/vnd.github.v3+json',
+    authorization: auth.token ? `token ${auth.token}` : `Basic ${Buffer.from(auth.username + ':' + auth.password, 'ascii').toString('base64')}`
+  }
+
+  return headers
+}
+
 (async () => {
   let projectPath = '.'
   program
@@ -240,13 +252,15 @@ const httpGetWrapper = (url, version) => {
   // testing credentials by fetching user's rate limit
   try {
     console.log('🔐  Testing github credentials... ')
-    const res = await github.misc.getRateLimit({})
-    if (res.data.rate.remaining === 0) {
+    const res = await fetch(`${GITHUB_API_URL}/rate_limit`, {headers: generateGithubHeaders(auth)})
+    const data = await res.json()
+
+    if (data.rate.remaining === 0) {
       console.log(`☠  Rate limit exceeded: (https://developer.github.com/v3/#rate-limiting 😞  ). Retry again next hour 👊  ☠`)
       process.exit(EXIT_FAILURE)
     } else {
-      const rateLimitMsg = chalk.yellow.bold(`${res.data.rate.limit - res.data.rate.remaining}/${res.data.rate.limit}`)
-      console.log(`⏳  You rate limit is ${rateLimitMsg} for this hour, so you still have ${chalk.yellow.bold(res.data.rate.remaining)} star to give!`)
+      const rateLimitMsg = chalk.yellow.bold(`${data.rate.limit - data.rate.remaining}/${data.rate.limit}`)
+      console.log(`⏳  You rate limit is ${rateLimitMsg} for this hour, so you still have ${chalk.yellow.bold(data.rate.remaining)} star to give!`)
     }
   } catch (err) {
     let message = err.toString()

@@ -26,6 +26,7 @@
     "chalk": "^2.3.0",
     "commander": "^2.12.2",
     "github": "^13.0.1",
+    "node-fetch": "^1.7.3",
     "npm": "^5.6.0",
     "progress": "^2.0.0",
     "prompt": "^1.0.0"
