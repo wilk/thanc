@@ -189,7 +189,7 @@ const httpGetWrapper = (url, version) => {
 
           resolve(data.versions[version])
         } catch (err) {resolve(null)}
-      });
+      })
     }).on('error', () => resolve(null))
   })
 }
@@ -400,12 +400,7 @@ const httpGetWrapper = (url, version) => {
   try {
     let starRepo = starReposList, bar
     if (program.quite) {
-      bar = new ProgressBar('🌟  Starring dependencies... [:bar] :percent', {
-        complete: '=',
-        incomplete: ' ',
-        width: 50,
-        total: reposMatrix.length
-      })
+      bar = new ProgressBar('🌟  Starring dependencies... [:bar] :percent', Object.assign({}, PROGRESS_BAR_BASE_CONFIG, {total: reposMatrix.length}))
 
       starRepo = starReposProgress
     } else console.log("🌟  Starring dependencies...\n")
