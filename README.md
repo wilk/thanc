@@ -1,5 +1,5 @@
 # ⭐  thanc
-thanc: a smart way to thank the authors of NPM packages by starring their repos on Github :heart:
+thanc: a smarty way to thank the authors of NPM packages by starring their repos on Github :heart:
 
 With thanc you'll thank every dependency and sub-dependency (**literally the whole dependencies tree**) of a given project provided with a `package.json` (or better a `package-lock.json`) manifest.
 So yes, it works also with `yarn` 😺
@@ -98,6 +98,26 @@ $ thanc -t <your_github_token> .
 Via `GITHUB_TOKEN` env var:
 ```bash
 $ export GITHUB_TOKEN=<your_github_token>; thanc .
+```
+
+### Help
+thanc has several options you can check through `--help`:
+
+```bash
+$ thanc --help
+
+  Usage: thanc [options] <project_path>
+
+
+  Options:
+
+    -V, --version              output the version number
+    --me                       thank thanc package and all of its dependencies
+    -u, --username <username>  your Github username
+    -p, --password <password>  your Github password
+    -t, --token <password>     your Github token
+    -q, --quite                Show only the progress bar instead of the repos list
+    -h, --help                 output usage information
 ```
 
 ## ✋  Limitations
