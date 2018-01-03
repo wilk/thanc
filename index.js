@@ -5,8 +5,6 @@ const path = require('path')
 const os = require('os')
 const https = require('https')
 
-// @todo: replace github with base http requests
-const GitHubApi = require('github')
 const program = require('commander')
 const chalk = require('chalk')
 const ProgressBar = require('progress')
@@ -19,7 +17,6 @@ const GITHUB_API_URL = 'https://api.github.com'
 const EXIT_FAILURE = 1
 const CHUNK_SIZE = 35
 const THANC_REPO = 'thanc'
-const github = new GitHubApi()
 const PROGRESS_BAR_BASE_CONFIG = {
   complete: '=',
   incomplete: ' ',
@@ -133,20 +130,20 @@ const generateLockFile = async projectPath => {
 }
 
 // star repos and list them
-const starReposList = ({chunk, github}) => {
+const starReposList = ({chunk, auth}) => {
   const promises = chunk.map(({owner, repo}) => {
     console.log(`⭐️   ${chalk.yellow('Thanks')} to ${chalk.yellow.bold(owner)} for ${chalk.yellow.bold(repo)}`)
-    return github.activity.starRepo({owner, repo})
+    return fetch(`${GITHUB_API_URL}/user/${owner}/${repo}`, {method: 'PUT', headers: generateGithubHeaders(auth)})
   })
 
   return Promise.all(promises)
 }
 
 // star repos and increment the progress bar
-const starReposProgress = ({chunk, github, bar}) => {
+const starReposProgress = ({chunk, auth, bar}) => {
   bar.tick()
 
-  const promises = chunk.map(({owner, repo}) => github.activity.starRepo({owner, repo}))
+  const promises = chunk.map(({owner, repo}) => fetch(`${GITHUB_API_URL}/user/${owner}/${repo}`, {method: 'PUT', headers: generateGithubHeaders(auth)}))
 
   return Promise.all(promises)
 }
@@ -164,46 +161,12 @@ const parseDependenciesTree = deps => {
   return dependencies
 }
 
-// promise wrapper for https.get
-const httpGetWrapper = (url, version) => {
-  return new Promise(resolve => {
-    https.get(url, res => {
-      const { statusCode } = res,
-        contentType = res.headers['content-type']
-
-      let err
-      if (statusCode !== 200) err = new Error(`Request Failed.\nStatus Code: ${statusCode}`)
-      else if (!/^application\/json/.test(contentType)) err = new Error(`Invalid content-type.\nExpected application/json but received ${contentType}`)
-
-      if (err) {
-        // consume response data to free up memory
-        res.resume()
-
-        return resolve(null)
-      }
-
-      res.setEncoding('utf8')
-      let rawData = ''
-      res.on('data', chunk => rawData += chunk)
-      res.on('end', () => {
-        try {
-          const data = JSON.parse(rawData)
-
-          resolve(data.versions[version])
-        } catch (err) {resolve(null)}
-      })
-    }).on('error', () => resolve(null))
-  })
-}
-
 // generate github headers
 const generateGithubHeaders = auth => {
-  const headers = {
+  return {
     accept: 'application/vnd.github.v3+json',
     authorization: auth.token ? `token ${auth.token}` : `Basic ${Buffer.from(auth.username + ':' + auth.password, 'ascii').toString('base64')}`
   }
-
-  return headers
 }
 
 (async () => {
@@ -246,8 +209,6 @@ const generateGithubHeaders = auth => {
       process.exit(EXIT_FAILURE)
     }
   }
-
-  github.authenticate(auth)
 
   // testing credentials by fetching user's rate limit
   try {
@@ -333,13 +294,18 @@ const generateGithubHeaders = auth => {
   // generating deps repos promises
   const depsBar = new ProgressBar('📦  Getting dependencies info... [:bar] :percent', Object.assign({}, PROGRESS_BAR_BASE_CONFIG, {total: dependencies.length}))
   const depsPromises = dependencies.map(async ({name, version}) => {
-    // encode scoped packages: @user/package -> @user%2f
-    // due to this: https://github.com/npm/npm-registry-client/issues/123#issuecomment-154840629
-    const encodedDep = name.replace(/\//g, '%2f')
-    const dep = await httpGetWrapper(`${NPM_REGISTRY_URL}/${encodedDep}`, version)
-    depsBar.tick()
-
-    return Promise.resolve(dep)
+    try {
+      // encode scoped packages: @user/package -> @user%2f
+      // due to this: https://github.com/npm/npm-registry-client/issues/123#issuecomment-154840629
+      const encodedDep = name.replace(/\//g, '%2f')
+      const res = await fetch(`${NPM_REGISTRY_URL}/${encodedDep}`)
+      const data = await res.json()
+      depsBar.tick()
+      return Promise.resolve(data.versions[version])
+    } catch (err) {
+      depsBar.tick()
+      return Promise.resolve(null)
+    }
   })
 
   // getting deps repos
@@ -423,7 +389,7 @@ const generateGithubHeaders = auth => {
     await reposMatrix.reduce(async (promise, chunk) => {
       try {
         await promise
-        return starRepo({chunk, github, bar})
+        return starRepo({chunk, auth, bar})
       } catch (err) {invalidRepoUrl++}
     }, Promise.resolve())
     console.log(`\n✨  Starred ${chalk.yellow.bold(repos.length - invalidRepoUrl)} repos! ✨`)
