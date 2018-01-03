@@ -22,11 +22,11 @@ Basically, because the thank (and also thanks) package already exists on NPM reg
 
 Thanc (or thancian) is the ancient english word to say thank, so that's why :bowtie:
 
-## 🔒  Authentication Types Supported
-thanc supports two types of authentication:
+## 📦 Requirements
+thanc works with the following requirements:
 
-- **Basic**: it requires your Github username and password
-- **Token**: it requires one of your Github user token (just **[create a new token](https://github.com/settings/tokens/new)** here with `public_repo` permission)
+ - Node.js 4+
+ - NPM 2.14+
 
 ## 🛠  Installation
 thanc can be installed locally or globally.
@@ -99,6 +99,12 @@ Via `GITHUB_TOKEN` env var:
 ```bash
 $ export GITHUB_TOKEN=<your_github_token>; thanc .
 ```
+
+## 🔒  Authentication Types Supported
+thanc supports two types of authentication:
+
+- **Basic**: it requires your Github username and password
+- **Token**: it requires one of your Github user token (just **[create a new token](https://github.com/settings/tokens/new)** here with `public_repo` permission)
 
 ### Help
 thanc has several options you can check through `--help`:
