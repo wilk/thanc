@@ -165,7 +165,7 @@ const parseDependenciesTree = deps => {
 const generateGithubHeaders = auth => {
   return {
     accept: 'application/vnd.github.v3+json',
-    authorization: auth.token ? `token ${auth.token}` : `Basic ${Buffer.from(auth.username + ':' + auth.password, 'ascii').toString('base64')}`
+    authorization: auth.token ? `token ${auth.token}` : `Basic ${new Buffer(auth.username + ':' + auth.password).toString('base64')}`
   }
 }
 
