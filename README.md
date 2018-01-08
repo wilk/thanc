@@ -106,7 +106,7 @@ thanc supports two types of authentication:
 - **Basic**: it requires your Github username and password
 - **Token**: it requires one of your Github user token (just **[create a new token](https://github.com/settings/tokens/new)** here with `public_repo` permission)
 
-### Help
+## 📖 Help
 thanc has several options you can check through `--help`:
 
 ```bash
@@ -125,6 +125,24 @@ $ thanc --help
     -q, --quite                Show only the progress bar instead of the repos list
     -h, --help                 output usage information
 ```
+
+## 🔑  Build Verification
+thanc is published as a transpiled lib and so, for each new tag, a new build is performed, generating the `dist.js` file.
+
+To verify if `dist.js` is exactly the transpiled version of thanc, a `md5` checksum has been provided (and always up-to-date) inside the package.json (`checksums`).
+
+The build verification process can be done as follows:
+
+```bash
+$ git clone https://github.com/wilk/thanc
+$ cd thanc
+$ npm i
+$ npm run build
+# replace md5sum with your favourite md5 program
+$ md5sum dist.js
+```
+
+The result must be equal to checksums listed inside the `package.json`.
 
 ## ✋  Limitations
 Github APIs have some limitations:
