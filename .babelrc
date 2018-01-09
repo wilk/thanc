@@ -3,12 +3,10 @@
     ["transform-runtime", {
       "polyfill": true,
       "regenerator": true
-    }],
-    "external-helpers"
+    }]
   ],
   "presets": [
     ["env", {
-      "modules": false,
       "targets": {
         "node": "4.0.0"
       }
