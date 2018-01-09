@@ -129,7 +129,13 @@ $ thanc --help
 ## 🔑  Build Verification
 thanc is published as a transpiled lib and so, for each new tag, a new build is performed, generating the `dist.js` file.
 
-To verify if `dist.js` is exactly the transpiled version of thanc, a `md5` checksum has been provided (and always up-to-date) inside the package.json (`checksums`).
+To verify if `dist.js` is exactly the transpiled version of thanc, a `md5` checksum has been provided (and always up-to-date) inside the package.json (`checksums`):
+
+```bash
+$ md5sum dist.js
+```
+
+The result must be equal to checksums listed inside the `package.json`.
 
 The build verification process can be done as follows:
 
@@ -141,8 +147,6 @@ $ npm run build
 # replace md5sum with your favourite md5 program
 $ md5sum dist.js
 ```
-
-The result must be equal to checksums listed inside the `package.json`.
 
 ## ✋  Limitations
 Github APIs have some limitations:
