@@ -1,9 +1,9 @@
 {
   "name": "thanc",
-  "version": "1.6.12",
+  "version": "1.6.13",
   "description": "thanc: a smarty way to thank the authors of NPM packages by starring their repos on Github",
   "checksums": {
-    "md5": "e4aa7b7937a0f5c4e1e4699685c6df87"
+    "md5": "e67c2be3f4f430ac44053b784e608923"
   },
   "scripts": {
     "build": "rollup -c"
