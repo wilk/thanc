@@ -2,7 +2,6 @@
   "name": "thanc",
   "version": "1.6.11",
   "description": "thanc: a smarty way to thank the authors of NPM packages by starring their repos on Github",
-  "main": "index.js",
   "checksums": {
     "md5": "e4aa7b7937a0f5c4e1e4699685c6df87"
   },
@@ -24,7 +23,12 @@
     "url": "https://github.com/wilk/thanc"
   },
   "license": "MIT",
-  "dependencies": {
+  "dependencies": {},
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-plugin-transform-runtime": "^6.23.0",
+    "babel-preset-env": "^1.6.1",
+    "babel-preset-minify": "^0.2.0",
     "babel-runtime": "^6.26.0",
     "chalk": "^2.3.0",
     "commander": "^2.12.2",
@@ -32,11 +36,5 @@
     "npm": "^5.6.0",
     "progress": "^2.0.0",
     "prompt": "^1.0.0"
-  },
-  "devDependencies": {
-    "babel-cli": "^6.26.0",
-    "babel-plugin-transform-runtime": "^6.23.0",
-    "babel-preset-env": "^1.6.1",
-    "babel-preset-minify": "^0.2.0"
   }
 }
