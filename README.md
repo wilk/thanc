@@ -29,7 +29,14 @@ thanc works with the following requirements:
  - NPM 2.14+
 
 ## 🛠  Installation
-thanc can be installed locally or globally.
+thanc can be installed locally, globally or used with npx.
+
+### With NPX
+If you've NPM 5.2+, then you can go ahead with [npx](https://medium.com/@maybekatz/introducing-npx-an-npm-package-runner-55f7d4bd282b):
+
+```bash
+$ npx thanc --me
+```
  
 ### Install locally
 ```bash
