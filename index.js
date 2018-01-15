@@ -133,7 +133,7 @@ const generateLockFile = async projectPath => {
 const starReposList = ({chunk, auth}) => {
   const promises = chunk.map(({owner, repo}) => {
     console.log(`⭐️   ${chalk.yellow('Thanks')} to ${chalk.yellow.bold(owner)} for ${chalk.yellow.bold(repo)}`)
-    return fetch(`${GITHUB_API_URL}/user/${owner}/${repo}`, {method: 'PUT', headers: generateGithubHeaders(auth)})
+    return fetch(`${GITHUB_API_URL}/user/starred/${owner}/${repo}`, {method: 'PUT', headers: generateGithubHeaders(auth)})
   })
 
   return Promise.all(promises)
@@ -143,7 +143,7 @@ const starReposList = ({chunk, auth}) => {
 const starReposProgress = ({chunk, auth, bar}) => {
   bar.tick()
 
-  const promises = chunk.map(({owner, repo}) => fetch(`${GITHUB_API_URL}/user/${owner}/${repo}`, {method: 'PUT', headers: generateGithubHeaders(auth)}))
+  const promises = chunk.map(({owner, repo}) => fetch(`${GITHUB_API_URL}/user/starred/${owner}/${repo}`, {method: 'PUT', headers: generateGithubHeaders(auth)}))
 
   return Promise.all(promises)
 }
