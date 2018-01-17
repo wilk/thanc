@@ -1,6 +1,6 @@
 {
   "name": "thanc",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "thanc: a smarty way to thank the authors of NPM packages by starring their repos on Github",
   "checksums": {
     "md5": "dff4afa68795f382c8ce989a4391e24a",
