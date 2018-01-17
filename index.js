@@ -6,7 +6,6 @@ const os = require('os')
 const https = require('https')
 
 const program = require('commander')
-const chalk = require('chalk')
 const ProgressBar = require('progress')
 const fetch = require('node-fetch')
 
@@ -23,6 +22,12 @@ const PROGRESS_BAR_BASE_CONFIG = {
   incomplete: ' ',
   width: 50
 }
+const COLOR_RESET = '\x1b[0m'
+const YELLOW_ON = '\x1b[33m'
+const YELLOW_BOLD_ON = `\x1b[1m${YELLOW_ON}`
+
+const yellowerize = str => `${YELLOW_ON}${str}${COLOR_RESET}`
+const bolderize = str => `${YELLOW_BOLD_ON}${str}${COLOR_RESET}`
 
 const authTypeSchema = {
   properties: {
@@ -173,7 +178,7 @@ const generateLockFile = projectPath => {
 // star repos and list them
 const starReposList = ({chunk, auth}) => {
   const promises = chunk.map(({owner, repo}) => {
-    console.log(`⭐️   ${chalk.yellow('Thanks')} to ${chalk.yellow.bold(owner)} for ${chalk.yellow.bold(repo)}`)
+    console.log(`⭐️   ${yellowerize('Thanks')} to ${bolderize(yellowerize(owner))} for ${yellowerize(bolderize(repo))}`)
     return fetch(`${GITHUB_API_URL}/user/starred/${owner}/${repo}`, {method: 'PUT', headers: generateGithubHeaders(auth)})
   })
 
@@ -261,8 +266,8 @@ const generateGithubHeaders = auth => {
       console.log(`☠  Rate limit exceeded: (https://developer.github.com/v3/#rate-limiting 😞  ). Retry again next hour 👊  ☠`)
       process.exit(EXIT_FAILURE)
     } else {
-      const rateLimitMsg = chalk.yellow.bold(`${data.rate.limit - data.rate.remaining}/${data.rate.limit}`)
-      console.log(`⏳  You rate limit is ${rateLimitMsg} for this hour, so you still have ${chalk.yellow.bold(data.rate.remaining)} star to give!`)
+      const rateLimitMsg = yellowerize(bolderize(`${data.rate.limit - data.rate.remaining}/${data.rate.limit}`))
+      console.log(`⏳  You rate limit is ${rateLimitMsg} for this hour, so you still have ${yellowerize(bolderize(data.rate.remaining))} star to give!`)
     }
   } catch (err) {
     let message = err.toString()
@@ -461,7 +466,7 @@ const generateGithubHeaders = auth => {
         return starRepo({chunk, auth, bar})
       } catch (err) {invalidRepoUrl++}
     }, Promise.resolve())
-    console.log(`\n✨  Starred ${chalk.yellow.bold(repos.length - invalidRepoUrl)} repos! ✨`)
+    console.log(`\n✨  Starred ${yellowerize(bolderize(repos.length - invalidRepoUrl))} repos! ✨`)
   } catch (err) {
     console.log('☠  Cannot star dependencies ☠')
     let message = err.toString()
