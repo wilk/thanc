@@ -1,10 +1,10 @@
 {
   "name": "thanc",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "description": "thanc: a smarty way to thank the authors of NPM packages by starring their repos on Github",
   "checksums": {
-    "md5": "dff4afa68795f382c8ce989a4391e24a",
-    "sha1": "653f319cedd54cdb17c42bed9d981719529f34ee"
+    "md5": "c0488e3e4c5f6deaac26b80f4974f7ba",
+    "sha1": "f7894b95b2f7f4c61582b54c0c9465719952684e"
   },
   "scripts": {
     "build": "babel index.js --out-file dist.js"
