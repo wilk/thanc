@@ -14,6 +14,7 @@ const thancPkg = require('./package.json')
 
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org'
 const GITHUB_API_URL = 'https://api.github.com'
+const GITHUB_RAW_CONTENT = 'https://raw.githubusercontent.com'
 const EXIT_FAILURE = 1
 const CHUNK_SIZE = 35
 const THANC_REPO = 'thanc'
@@ -71,35 +72,9 @@ const promptGetAsync = (prompt, schema) => {
   })
 }
 
-// generate lock file from package.json
-const generateLockFile = async projectPath => {
+// npm async install command
+const npmLoad = tmpFolder => {
   return new Promise((resolve, reject) => {
-    // testing package.json (if it does exist or not)
-    let packageJsonPath = path.resolve(projectPath, './package.json')
-    try {
-      fs.accessSync(packageJsonPath, fs.constants.R_OK)
-    } catch (err) {
-      console.log("\n☠  Cannot find package.json: make sure to specify a Node.js project folder ☠")
-      return reject(err)
-    }
-
-    // creating tmp folder
-    let tmpFolder
-    try {
-      tmpFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'thanc-'))
-    } catch (err) {
-      console.log("\n☠  Cannot create temporary folder on file system ☠")
-      return reject(err)
-    }
-
-    // copying package.json into tmp folder
-    try {
-      fs.copyFileSync(packageJsonPath, `${tmpFolder}/package.json`)
-    } catch (err) {
-      console.log("\n☠  Cannot copy package.json file on temp folder ☠")
-      return reject(err)
-    }
-
     // lazy loading for npm (used just in this case)
     const npm = require('npm')
 
@@ -126,6 +101,72 @@ const generateLockFile = async projectPath => {
         resolve(`${tmpFolder}/package-lock.json`)
       })
     })
+  })
+}
+
+// generate lock file from in memory package.json
+const generateLockFileInMemory = pkgJson => {
+  return new Promise(async (resolve, reject) => {
+    // creating tmp folder
+    let tmpFolder
+    try {
+      tmpFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'thanc-'))
+    } catch (err) {
+      console.log("\n☠  Cannot create temporary folder on file system ☠")
+      return reject(err)
+    }
+
+    try {
+      fs.writeFileSync(path.resolve(tmpFolder, './package.json'), JSON.stringify(pkgJson))
+    } catch (err) {
+      console.log("\n☠  Cannot write package.json file on temp folder ☠")
+      return reject(err)
+    }
+
+    try {
+      const res = await npmLoad(tmpFolder)
+      resolve(res)
+    } catch (err) {
+      reject(err)
+    }
+  })
+}
+
+// generate lock file from package.json
+const generateLockFile = projectPath => {
+  return new Promise(async (resolve, reject) => {
+    // testing package.json (if it does exist or not)
+    let packageJsonPath = path.resolve(projectPath, './package.json')
+    try {
+      fs.accessSync(packageJsonPath, fs.constants.R_OK)
+    } catch (err) {
+      console.log("\n☠  Cannot find package.json: make sure to specify a Node.js project folder ☠")
+      return reject(err)
+    }
+
+    // creating tmp folder
+    let tmpFolder
+    try {
+      tmpFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'thanc-'))
+    } catch (err) {
+      console.log("\n☠  Cannot create temporary folder on file system ☠")
+      return reject(err)
+    }
+
+    // copying package.json into tmp folder
+    try {
+      fs.copyFileSync(packageJsonPath, `${tmpFolder}/package.json`)
+    } catch (err) {
+      console.log("\n☠  Cannot copy package.json file on temp folder ☠")
+      return reject(err)
+    }
+
+    try {
+      const res = await npmLoad(tmpFolder)
+      resolve(res)
+    } catch (err) {
+      reject(err)
+    }
   })
 }
 
@@ -235,24 +276,52 @@ const generateGithubHeaders = auth => {
 
   let manifest, manifestExists = true
 
-  // looking for package.json file
-  try {
-    console.log('📄  Reading package-lock.json file... ')
-    manifest = fs.readFileSync(path.resolve(projectPath, './package-lock.json'), 'utf-8')
-  } catch (err) {
-    manifestExists = false
-  }
+  // checking if path is an URL
+  if (projectPath.startsWith('https://github.com')) {
+    const urlSplit = projectPath.split('/'),
+      owner = urlSplit[urlSplit.length - 2],
+      repo = urlSplit[urlSplit.length - 1]
 
-  if (!manifestExists) {
+    let pkg
     try {
-      console.log('⚡  ️package-lock.json does not exist in this folder ⚡️')
-      process.stdout.write('⚙️  Generating a temporary package-lock.json from package.json... ')
-      const manifestPath = await generateLockFile(projectPath)
+      console.log('🔗  Downloading package.json from Github... ')
+      const res = await fetch(`${GITHUB_RAW_CONTENT}/${owner}/${repo}/master/package.json`)
+      pkg = await res.json()
+    } catch (err) {
+      console.log('☠️  Cannot download package.json file ☠️')
+
+      process.exit(EXIT_FAILURE)
+    }
+
+    try {
+      console.log('⚙️  Generating a temporary package-lock.json from package.json... ')
+      const manifestPath = await generateLockFileInMemory(pkg)
       manifest = fs.readFileSync(manifestPath, 'utf-8')
     } catch (err) {
       console.log('☠️  Cannot generate package-lock.json file ☠️')
 
       process.exit(EXIT_FAILURE)
+    }
+  } else {
+    // looking for package.json file
+    try {
+      console.log('📄  Reading package-lock.json file... ')
+      manifest = fs.readFileSync(path.resolve(projectPath, './package-lock.json'), 'utf-8')
+    } catch (err) {
+      manifestExists = false
+    }
+
+    if (!manifestExists) {
+      try {
+        console.log('⚡  ️package-lock.json does not exist in this folder ⚡️')
+        process.stdout.write('⚙️  Generating a temporary package-lock.json from package.json... ')
+        const manifestPath = await generateLockFile(projectPath)
+        manifest = fs.readFileSync(manifestPath, 'utf-8')
+      } catch (err) {
+        console.log('☠️  Cannot generate package-lock.json file ☠️')
+
+        process.exit(EXIT_FAILURE)
+      }
     }
   }
 
