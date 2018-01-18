@@ -70,6 +70,12 @@ Thanking current folder:
 $ thanc
 ```
 
+Thanking an online Github repo:
+
+```bash
+$ thanc https://github.com/wilk/thanc
+```
+
 Thanking a specific folder:
 
 ```bash
