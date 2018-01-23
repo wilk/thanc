@@ -1,4 +1,6 @@
 # ⭐  thanc
+![thanc](https://github.com/wilk/thanc/raw/master/thanc.svg "thanc")
+
 thanc: a smarty way to thank the authors of NPM packages by starring their repos on Github :heart:
 
 With thanc you'll thank every dependency and sub-dependency (**literally the whole dependencies tree**) of a given project provided with a `package.json` (or better a `package-lock.json`) manifest.
@@ -21,12 +23,6 @@ Inspired by:
 Basically, because the thank (and also thanks) package already exists on NPM registry.
 
 Thanc (or thancian) is the ancient english word to say thank, so that's why :bowtie:
-
-## 📦 Requirements
-thanc works with the following requirements:
-
- - Node.js 4+
- - NPM 2.14+
 
 ## 🛠  Installation
 thanc can be installed locally, globally or used with npx.
