@@ -1,5 +1,5 @@
 # ⭐  thanc
-![thanc](https://github.com/wilk/thanc/raw/master/thanc.svg "thanc")
+![thanc](./thanc.svg "thanc")
 
 thanc: a smarty way to thank the authors of NPM packages by starring their repos on Github :heart:
 
