@@ -1,5 +1,4 @@
-# ⭐  thanc
-![thanc](./thanc.svg "thanc")
+# ![thanc](./thanc.svg "thanc")
 
 thanc: a smarty way to thank the authors of NPM packages by starring their repos on Github :heart:
 
@@ -8,11 +7,11 @@ So yes, it works also with `yarn` 😺
 
 This is what thanc looks like:
 
-![start](https://github.com/wilk/thanc/raw/master/start.png "start")
+![start](./start.png "start")
 
 and then, after too many repos:
 
-![end](https://github.com/wilk/thanc/raw/master/end.png "end")
+![end](./end.png "end")
 
 Inspired by:
 
