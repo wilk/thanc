@@ -1,5 +1,5 @@
 # ![thanc](./thanc.svg "thanc")
-*Thanks to [@julietjul](https://twitter.com/julietjul) for the thanc logo*
+*Thanks to [@julietjul](https://twitter.com/julietjul) for thanc's logo*
 
 thanc: a smarty way to thank the authors of NPM packages by starring their repos on Github :heart:
 
