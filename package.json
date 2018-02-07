@@ -37,5 +37,23 @@
     "babel-plugin-transform-runtime": "^6.23.0",
     "babel-preset-env": "^1.6.1",
     "babel-preset-minify": "^0.2.0"
-  }
+  },
+  "keywords": [
+    "thanc",
+    "thank",
+    "thanks",
+    "star",
+    "stars",
+    "open source",
+    "sustainability",
+    "donate",
+    "support",
+    "funding",
+    "patreon",
+    "donor",
+    "thank you",
+    "fund",
+    "sustain",
+    "earn"
+  ]
 }
